@@ -23,7 +23,7 @@ REDOC_HTML_PATH = "/redoc"
 SWAGGER_OAUTH2_REDIRECT_PATH = "/docs/oauth2-redirect"
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-REACT_DIST_DIR = Path(__file__).resolve().parent.parent.parent.parent / "frontend" / "dist"
+REACT_DIST_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
 # Paths that skip authentication
 _PUBLIC_PREFIXES = (
