@@ -1,0 +1,23 @@
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
+
+# Base schema for service group attributes
+class ServiceGroupBase(BaseModel):
+    name: str
+    members: Optional[str] = None
+    description: Optional[str] = None
+
+# Schema for creating a new service group
+class ServiceGroupCreate(ServiceGroupBase):
+    device_id: int
+
+# Schema for reading service group data (from DB)
+class ServiceGroup(ServiceGroupBase):
+    id: int
+    device_id: int
+    is_active: bool
+    last_seen_at: datetime
+
+    class Config:
+        from_attributes = True

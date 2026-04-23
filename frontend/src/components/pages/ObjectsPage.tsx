@@ -1,0 +1,297 @@
+import { useState, useRef, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import { Download, Search, ArrowRight } from 'lucide-react'
+import type { ColDef } from '@ag-grid-community/core'
+import { AgGridWrapper, type AgGridWrapperHandle } from '@/components/shared/AgGridWrapper'
+import { ObjectDetailModal } from '@/components/shared/ObjectDetailModal'
+import { listDevices } from '@/api/devices'
+import { useDeviceStore } from '@/store/deviceStore'
+import {
+  getNetworkObjects, getNetworkGroups, getServices, getServiceGroups, exportToExcel,
+  type NetworkObject, type NetworkGroup, type Service, type ServiceGroup,
+} from '@/api/firewall'
+
+type TabKey = 'network_objects' | 'network_groups' | 'services' | 'service_groups'
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'network_objects', label: '네트워크 객체' },
+  { key: 'network_groups', label: '네트워크 그룹' },
+  { key: 'services', label: '서비스' },
+  { key: 'service_groups', label: '서비스 그룹' },
+]
+
+function useObjectsData(deviceIds: number[], tab: TabKey) {
+  const enabled = deviceIds.length > 0
+  const networkObjects = useQuery({
+    queryKey: ['network-objects', ...deviceIds],
+    queryFn: async () => (await Promise.all(deviceIds.map((id) => getNetworkObjects(id)))).flat(),
+    enabled: enabled && tab === 'network_objects', staleTime: 30_000,
+  })
+  const networkGroups = useQuery({
+    queryKey: ['network-groups', ...deviceIds],
+    queryFn: async () => (await Promise.all(deviceIds.map((id) => getNetworkGroups(id)))).flat(),
+    enabled: enabled && tab === 'network_groups', staleTime: 30_000,
+  })
+  const services = useQuery({
+    queryKey: ['services', ...deviceIds],
+    queryFn: async () => (await Promise.all(deviceIds.map((id) => getServices(id)))).flat(),
+    enabled: enabled && tab === 'services', staleTime: 30_000,
+  })
+  const serviceGroups = useQuery({
+    queryKey: ['service-groups', ...deviceIds],
+    queryFn: async () => (await Promise.all(deviceIds.map((id) => getServiceGroups(id)))).flat(),
+    enabled: enabled && tab === 'service_groups', staleTime: 30_000,
+  })
+  return { networkObjects, networkGroups, services, serviceGroups }
+}
+
+function DeviceNameCell({ deviceId, deviceNameMap }: { deviceId: number; deviceNameMap: Map<number, string> }) {
+  const name = deviceNameMap.get(deviceId) ?? String(deviceId)
+  return <span className="text-[11px] font-semibold text-ds-tertiary font-mono">{name}</span>
+}
+
+function SearchPolicyButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title="정책에서 검색"
+      className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold text-ds-tertiary/70 hover:text-ds-tertiary hover:bg-ds-tertiary/10 transition-colors"
+    >
+      <ArrowRight className="w-2.5 h-2.5" />
+      정책
+    </button>
+  )
+}
+
+function TabGrid<T>({ columnDefs, rowData, isLoading, onExport }: {
+  columnDefs: ColDef<T>[]
+  rowData: T[]
+  isLoading: boolean
+  onExport: () => void
+}) {
+  const gridRef = useRef<AgGridWrapperHandle>(null)
+  const [quickFilter, setQuickFilter] = useState('')
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-1 bg-ds-surface-container-low rounded-md px-3 py-1.5 border border-ds-outline-variant/20">
+          <Search className="w-3.5 h-3.5 text-ds-outline shrink-0" />
+          <input
+            placeholder="빠른 검색…"
+            value={quickFilter}
+            onChange={(e) => setQuickFilter(e.target.value)}
+            className="flex-1 bg-transparent text-sm focus:outline-none text-ds-on-surface placeholder:text-ds-outline/50"
+          />
+        </div>
+        <span className="text-xs text-ds-on-surface-variant whitespace-nowrap">{rowData.length.toLocaleString()}건</span>
+        <button
+          onClick={onExport}
+          disabled={rowData.length === 0}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-ds-on-surface-variant bg-ds-surface-container-low rounded-md hover:text-ds-on-surface disabled:opacity-40 transition-colors"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Excel
+        </button>
+      </div>
+      {isLoading ? (
+        <div className="py-12 text-center text-sm text-ds-on-surface-variant">로딩 중…</div>
+      ) : (
+        <AgGridWrapper<T>
+          ref={gridRef}
+          columnDefs={columnDefs}
+          rowData={rowData}
+          getRowId={(p) => String((p.data as Record<string, unknown>)['id'])}
+          quickFilterText={quickFilter}
+          height="calc(100vh - 280px)"
+          noRowsText="사이드바에서 장비를 선택하세요."
+        />
+      )}
+    </div>
+  )
+}
+
+export function ObjectsPage() {
+  const { selectedIds: deviceIds } = useDeviceStore()
+  const [activeTab, setActiveTab] = useState<TabKey>('network_objects')
+  const [objectModal, setObjectModal] = useState<{ deviceId: number; name: string } | null>(null)
+  const { data: devices = [] } = useQuery({ queryKey: ['devices'], queryFn: listDevices })
+  const navigate = useNavigate()
+  const { networkObjects, networkGroups, services, serviceGroups } = useObjectsData(deviceIds, activeTab)
+
+  const deviceNameMap = useMemo(
+    () => new Map(devices.map(d => [d.id, d.name])),
+    [devices]
+  )
+
+  const handleExport = async (data: unknown[], filename: string) => {
+    if (data.length === 0) { toast.warning('내보낼 데이터가 없습니다.'); return }
+    try { await exportToExcel(data as Record<string, unknown>[], filename) }
+    catch (e: unknown) { toast.error((e as Error).message) }
+  }
+
+  const deviceNameCol = <T extends { device_id: number }>(): ColDef<T> => ({
+    headerName: '장비명',
+    filter: 'agTextColumnFilter',
+    width: 130,
+    pinned: 'left' as const,
+    valueGetter: (p) => deviceNameMap.get((p.data as T)?.device_id ?? -1) ?? String((p.data as T)?.device_id ?? '-'),
+    cellRenderer: (p: { value: string }) => (
+      <span className="text-[11px] font-semibold text-ds-tertiary font-mono">{p.value}</span>
+    ),
+  })
+
+  const networkObjectCols: ColDef<NetworkObject>[] = [
+    deviceNameCol<NetworkObject>() as ColDef<NetworkObject>,
+    {
+      field: 'name', headerName: '이름', filter: 'agTextColumnFilter', width: 220,
+      cellRenderer: (p: { value: string; data: NetworkObject }) => (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setObjectModal({ deviceId: p.data.device_id, name: p.value })}
+            className="font-mono text-xs font-semibold text-ds-tertiary hover:underline text-left truncate"
+          >
+            {p.value}
+          </button>
+          <SearchPolicyButton onClick={() => navigate(`/policies?src_name=${encodeURIComponent(p.value)}`)} />
+        </div>
+      ),
+    },
+    { field: 'ip_address', headerName: 'IP 주소', filter: 'agTextColumnFilter', width: 180, cellRenderer: (p: { value: string }) => <span className="font-mono text-xs text-ds-on-surface-variant">{p.value ?? '-'}</span> },
+    { field: 'type', headerName: '타입', filter: 'agTextColumnFilter', width: 100, cellRenderer: (p: { value: string }) => <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-ds-surface-container text-ds-on-surface-variant uppercase">{p.value}</span> },
+    { field: 'description', headerName: '설명', filter: 'agTextColumnFilter', flex: 1 },
+  ]
+
+  const networkGroupCols: ColDef<NetworkGroup>[] = [
+    deviceNameCol<NetworkGroup>() as ColDef<NetworkGroup>,
+    {
+      field: 'name', headerName: '이름', filter: 'agTextColumnFilter', width: 220,
+      cellRenderer: (p: { value: string }) => (
+        <div className="flex items-center gap-1">
+          <span className="font-mono text-xs font-semibold text-ds-on-surface truncate">{p.value}</span>
+          <SearchPolicyButton onClick={() => navigate(`/policies?src_name=${encodeURIComponent(p.value)}`)} />
+        </div>
+      ),
+    },
+    {
+      field: 'members', headerName: '멤버', filter: 'agTextColumnFilter', flex: 1, autoHeight: true,
+      cellRenderer: (p: { value: string }) => {
+        const members = (p.value ?? '').split(',').map((m: string) => m.trim()).filter(Boolean)
+        return (
+          <div className="flex flex-wrap gap-1 py-1">
+            {members.map((m, i) => (
+              <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono bg-ds-secondary-container text-ds-tertiary">{m}</span>
+            ))}
+          </div>
+        )
+      },
+    },
+    { field: 'description', headerName: '설명', filter: 'agTextColumnFilter', width: 200 },
+  ]
+
+  const serviceCols: ColDef<Service>[] = [
+    deviceNameCol<Service>() as ColDef<Service>,
+    {
+      field: 'name', headerName: '이름', filter: 'agTextColumnFilter', width: 220,
+      cellRenderer: (p: { value: string }) => (
+        <div className="flex items-center gap-1">
+          <span className="font-mono text-xs font-semibold text-ds-on-surface truncate">{p.value}</span>
+          <SearchPolicyButton onClick={() => navigate(`/policies?svc_name=${encodeURIComponent(p.value)}`)} />
+        </div>
+      ),
+    },
+    { field: 'protocol', headerName: '프로토콜', filter: 'agTextColumnFilter', width: 110, cellRenderer: (p: { value: string }) => <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-ds-surface-container text-ds-on-surface-variant uppercase">{p.value}</span> },
+    { field: 'port', headerName: '포트', filter: 'agTextColumnFilter', width: 140, cellRenderer: (p: { value: string }) => <span className="font-mono text-xs text-ds-on-surface-variant">{p.value ?? '-'}</span> },
+    { field: 'description', headerName: '설명', filter: 'agTextColumnFilter', flex: 1 },
+  ]
+
+  const serviceGroupCols: ColDef<ServiceGroup>[] = [
+    deviceNameCol<ServiceGroup>() as ColDef<ServiceGroup>,
+    {
+      field: 'name', headerName: '이름', filter: 'agTextColumnFilter', width: 220,
+      cellRenderer: (p: { value: string }) => (
+        <div className="flex items-center gap-1">
+          <span className="font-mono text-xs font-semibold text-ds-on-surface truncate">{p.value}</span>
+          <SearchPolicyButton onClick={() => navigate(`/policies?svc_name=${encodeURIComponent(p.value)}`)} />
+        </div>
+      ),
+    },
+    {
+      field: 'members', headerName: '멤버', filter: 'agTextColumnFilter', flex: 1, autoHeight: true,
+      cellRenderer: (p: { value: string }) => {
+        const members = (p.value ?? '').split(',').map((m: string) => m.trim()).filter(Boolean)
+        return (
+          <div className="flex flex-wrap gap-1 py-1">
+            {members.map((m, i) => (
+              <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono bg-ds-surface-container text-ds-on-surface-variant">{m}</span>
+            ))}
+          </div>
+        )
+      },
+    },
+    { field: 'description', headerName: '설명', filter: 'agTextColumnFilter', width: 200 },
+  ]
+
+  const tabContent: Record<TabKey, { data: unknown[]; isFetching: boolean; cols: ColDef<unknown>[]; filename: string }> = {
+    network_objects: { data: networkObjects.data ?? [], isFetching: networkObjects.isFetching, cols: networkObjectCols as ColDef<unknown>[], filename: '네트워크객체' },
+    network_groups:  { data: networkGroups.data ?? [],  isFetching: networkGroups.isFetching,  cols: networkGroupCols as ColDef<unknown>[],  filename: '네트워크그룹' },
+    services:        { data: services.data ?? [],        isFetching: services.isFetching,        cols: serviceCols as ColDef<unknown>[],        filename: '서비스' },
+    service_groups:  { data: serviceGroups.data ?? [],   isFetching: serviceGroups.isFetching,   cols: serviceGroupCols as ColDef<unknown>[],  filename: '서비스그룹' },
+  }
+
+  const current = tabContent[activeTab]
+
+  return (
+    <div className="space-y-4">
+      {/* Page header */}
+      <header>
+        <h1 className="text-2xl font-extrabold tracking-tight text-ds-on-surface font-headline">오브젝트</h1>
+        <p className="text-ds-on-surface-variant text-xs mt-0.5">네트워크 객체, 그룹, 서비스를 확인하고 정책과 연계합니다.</p>
+      </header>
+
+      {/* Tabs + Grid */}
+      <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border overflow-hidden">
+        {/* Tab bar */}
+        <div className="flex items-center gap-1 border-b border-ds-outline-variant/10 px-4 pt-2">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2 text-sm font-semibold tracking-tight transition-colors duration-150 border-b-2 -mb-px rounded-t ${
+                activeTab === tab.key
+                  ? 'text-ds-tertiary border-ds-tertiary'
+                  : 'text-ds-on-surface-variant border-transparent hover:text-ds-on-surface hover:border-ds-outline-variant/30'
+              }`}
+            >
+              {tab.label}
+              {tabContent[tab.key].data.length > 0 && (
+                <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.key ? 'bg-ds-tertiary/10 text-ds-tertiary' : 'bg-ds-surface-container text-ds-on-surface-variant'}`}>
+                  {tabContent[tab.key].data.length.toLocaleString()}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="p-4">
+          <TabGrid
+            columnDefs={current.cols}
+            rowData={current.data as unknown[]}
+            isLoading={current.isFetching}
+            onExport={() => handleExport(current.data, current.filename)}
+          />
+        </div>
+      </div>
+
+      {objectModal && (
+        <ObjectDetailModal
+          deviceId={objectModal.deviceId}
+          name={objectModal.name}
+          onClose={() => setObjectModal(null)}
+        />
+      )}
+    </div>
+  )
+}
