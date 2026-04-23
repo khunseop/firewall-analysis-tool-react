@@ -91,10 +91,6 @@ API 문서: `/docs` (Swagger) · `/redoc`
 | Risky Ports | `risky_ports.py` | 위험 포트 DB와 대조하여 취약 서비스 탐지 |
 | Over-permissive | `over_permissive.py` | 과도하게 광범위한 정책 탐지 |
 
-### 3.4. 삭제 워크플로우
-
-Config 기반 프로세서 파이프라인으로 삭제 검토 흐름을 처리하고 결과를 Excel로 내보냅니다. (`app/services/deletion_workflow/`)
-
 ---
 
 ## 4. 아키텍처
@@ -123,17 +119,7 @@ ORM Models     (app/models/)  ──►  SQLite fat.db  (via Alembic)
 | WebSocket 매니저 | `app/services/websocket_manager.py` | 동기화·분석 진행 상황을 모든 클라이언트에 브로드캐스트. |
 
 ### 프론트엔드
-
-Vanilla JS SPA (`/app` 경로). 프레임워크 없음.
-
-| 라이브러리 | 역할 |
-|-----------|------|
-| AG-Grid | 대용량 정책 데이터 브라우징 |
-| ApexCharts | 차트 / 대시보드 |
-| Bulma | CSS 프레임워크 |
-| ExcelJS | 클라이언트 사이드 Excel 생성 |
-| Tom-Select | 셀렉트 드롭다운 |
-| Font Awesome | 아이콘 |
+# react로 수정했음 현재 상황으로 맞춰야함
 
 ### 상세 문서
 
@@ -157,7 +143,7 @@ Vanilla JS SPA (`/app` 경로). 프레임워크 없음.
 
 - **DB 스키마 변경**: 직접 `fat.db` 수정 금지. 반드시 Alembic 마이그레이션을 거칠 것.
 - **비밀번호**: `app/core/security.py`의 `encrypt_password` / `decrypt_password`만 사용.
-- **프론트엔드**: Vanilla JS만 사용. React, Vue 등 JS 프레임워크 도입 금지.
+<!-- - **프론트엔드**: Vanilla JS만 사용. React, Vue 등 JS 프레임워크 도입 금지. -->
 - **임포트**: `app/` 루트 기준 절대 경로 사용.
   - ✅ `from app.services.sync.tasks import run_sync_all_orchestrator`
   - ❌ `from services.sync.tasks import ...`
