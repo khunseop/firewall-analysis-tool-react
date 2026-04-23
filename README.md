@@ -119,21 +119,22 @@ ORM Models     (app/models/)  ──►  SQLite fat.db  (via Alembic)
 | WebSocket 매니저 | `app/services/websocket_manager.py` | 동기화·분석 진행 상황을 모든 클라이언트에 브로드캐스트. |
 
 ### 프론트엔드
-# react로 수정했음 현재 상황으로 맞춰야함
+
+- **프레임워크**: React 19 + TypeScript + Vite
+- **상태 관리**: Zustand (localStorage persist) + TanStack React Query
+- **UI 라이브러리**: Radix UI (shadcn 스타일) + Tailwind CSS
+- **데이터 그리드**: Ag-Grid Community
+- **실시간 통신**: WebSocket (동기화·분석 진행 상황 업데이트)
 
 ### 상세 문서
 
 | 문서 | 내용 |
 |------|------|
-| [CURRENT_ARCHITECTURE.md](./CURRENT_ARCHITECTURE.md) | 데이터 흐름 및 전체 시스템 아키텍처 상세 |
+| [DEVELOPMENT.md](./DEVELOPMENT.md) | 개발 환경 설정 및 명령어 |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | 시스템 아키텍처 및 데이터 흐름 상세 |
 | [DATABASE.md](./DATABASE.md) | DB 테이블 명세 |
-| [SETUP.md](./SETUP.md) | 상세 설치 및 마이그레이션 가이드 |
-| [TODO.md](./TODO.md) | 작업 현황 및 로드맵 |
-| [services/README.md](./backend/app/services/README.md) | 서비스 계층 및 인덱싱 엔진 |
-| [sync/README.md](./backend/app/services/sync/README.md) | 동기화 오케스트레이션 상세 |
-| [firewall/README.md](./backend/app/services/firewall/README.md) | 벤더 추상화 인터페이스 |
-| [analysis/README.md](./backend/app/services/analysis/README.md) | 분석 알고리즘 및 결과 구조 |
-| [crud/README.md](./backend/app/crud/README.md) | 범위 검색 쿼리 및 성능 최적화 |
+| [API.md](./API.md) | API 엔드포인트 명세 |
+| [CLAUDE.md](./CLAUDE.md) | 개발자 가이드라인 및 제약사항 |
 
 ---
 
@@ -143,7 +144,6 @@ ORM Models     (app/models/)  ──►  SQLite fat.db  (via Alembic)
 
 - **DB 스키마 변경**: 직접 `fat.db` 수정 금지. 반드시 Alembic 마이그레이션을 거칠 것.
 - **비밀번호**: `app/core/security.py`의 `encrypt_password` / `decrypt_password`만 사용.
-<!-- - **프론트엔드**: Vanilla JS만 사용. React, Vue 등 JS 프레임워크 도입 금지. -->
 - **임포트**: `app/` 루트 기준 절대 경로 사용.
   - ✅ `from app.services.sync.tasks import run_sync_all_orchestrator`
   - ❌ `from services.sync.tasks import ...`

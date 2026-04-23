@@ -290,8 +290,8 @@ export function PoliciesPage() {
     <div className="flex flex-col gap-3 h-[calc(100vh-64px)]">
       {/* Page header */}
       <header className="shrink-0">
-        <h1 className="text-2xl font-extrabold tracking-tight text-ds-on-surface font-headline">방화벽 정책</h1>
-        <p className="text-ds-on-surface-variant text-xs mt-0.5">사이드바에서 장비를 선택하고 조건을 추가해 검색하세요.</p>
+        <h1 className="text-2xl font-extrabold tracking-tight text-ds-on-surface font-headline">Security Policies</h1>
+        {/* <p className="text-ds-on-surface-variant text-xs mt-0.5">사이드바에서 장비를 선택하고 조건을 추가해 검색하세요.</p> */}
       </header>
 
       {/* Filter panel */}

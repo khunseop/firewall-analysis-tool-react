@@ -20,6 +20,8 @@
 | `description` | `VARCHAR` | `NULLABLE` | 장비 설명 |
 | `ha_peer_ip` | `VARCHAR` | `NULLABLE` | HA 구성을 위한 상대 장비 IP (Palo Alto) |
 | `use_ssh_for_last_hit_date` | `BOOLEAN` | `DEFAULT False` | 히트 수집 시 SSH 사용 여부 |
+| `collect_last_hit_date` | `BOOLEAN` | `DEFAULT False` | Last Hit Date 수집 활성화 여부 |
+| `group` | `VARCHAR` | `NULLABLE` | 장비 그룹 (예: 서울DC, 부산DR) |
 | `model` | `VARCHAR` | `NULLABLE` | 장비 모델명 |
 | `last_sync_at` | `DATETIME` | `NULLABLE` | 마지막 동기화 완료 시간 |
 | `last_sync_status` | `VARCHAR` | `NULLABLE` | 동기화 상태 (in_progress, success, failure) |
@@ -40,6 +42,21 @@
 
 ---
 
+## 1.1. 사용자 관리
+
+### `users` Table (시스템 사용자)
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | `PRIMARY KEY`, `NOT NULL` | 고유 식별자 |
+| `username` | `VARCHAR` | `NOT NULL`, `UNIQUE` | 사용자명 |
+| `email` | `VARCHAR` | `NOT NULL`, `UNIQUE` | 이메일 |
+| `password_hash` | `VARCHAR` | `NOT NULL` | bcrypt 해시된 비밀번호 |
+| `is_active` | `BOOLEAN` | `DEFAULT True` | 활성 사용자 여부 |
+| `created_at` | `DATETIME` | `NOT NULL` | 계정 생성 시간 |
+| `last_login_at` | `DATETIME` | `NULLABLE` | 마지막 로그인 시간 |
+
+---
+
 ## 2. 정책 및 객체 테이블
 
 ### `network_objects` Table (네트워크 객체)
@@ -53,6 +70,7 @@
 | `ip_version` | `INTEGER` | `NULLABLE` | 4 (IPv4) 또는 6 (IPv6) |
 | `ip_start` | `BIGINT` | `NULLABLE` | 숫자형 시작 IP |
 | `ip_end` | `BIGINT` | `NULLABLE` | 숫자형 종료 IP |
+| `description` | `VARCHAR` | `NULLABLE` | 객체 설명 |
 | `is_active` | `BOOLEAN` | `NOT NULL` | 현재 활성 상태 여부 |
 | `last_seen_at` | `DATETIME` | `NOT NULL` | 마지막 확인 시간 |
 
@@ -63,6 +81,7 @@
 | `device_id` | `INTEGER` | `FOREIGN KEY` | 장비 참조 |
 | `name` | `VARCHAR` | `NOT NULL` | 그룹명 |
 | `members` | `VARCHAR` | `NULLABLE` | 멤버 리스트 (쉼표 구분) |
+| `description` | `VARCHAR` | `NULLABLE` | 그룹 설명 |
 | `is_active` | `BOOLEAN` | `NOT NULL` | 활성 상태 |
 | `last_seen_at` | `DATETIME` | `NOT NULL` | 마지막 확인 시간 |
 
@@ -76,7 +95,19 @@
 | `port` | `VARCHAR` | `NULLABLE` | 원시 포트 정의 |
 | `port_start` | `INTEGER` | `NULLABLE` | 시작 포트 (any=0) |
 | `port_end` | `INTEGER` | `NULLABLE` | 종료 포트 (any=65535) |
+| `description` | `VARCHAR` | `NULLABLE` | 서비스 설명 |
 | `is_active` | `BOOLEAN` | `NOT NULL` | 활성 상태 |
+
+### `service_groups` Table (서비스 그룹)
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | `PRIMARY KEY` | 식별자 |
+| `device_id` | `INTEGER` | `FOREIGN KEY` | 장비 참조 |
+| `name` | `VARCHAR` | `NOT NULL` | 그룹명 |
+| `members` | `VARCHAR` | `NULLABLE` | 멤버 리스트 (쉼표 구분) |
+| `description` | `VARCHAR` | `NULLABLE` | 그룹 설명 |
+| `is_active` | `BOOLEAN` | `NOT NULL` | 활성 상태 |
+| `last_seen_at` | `DATETIME` | `NOT NULL` | 마지막 확인 시간 |
 
 ### `policies` Table (보안 정책)
 | Column | Type | Constraints | Description |
@@ -139,6 +170,17 @@
 | `device_id` | `INTEGER` | `FOREIGN KEY` | 장비 참조 |
 | `analysis_type` | `VARCHAR` | `NOT NULL` | 분석 유형 |
 | `result_data` | `JSON` | `NOT NULL` | 상세 결과 데이터 (JSON) |
+
+### `redundancypolicysets` Table (중복 정책 분석 결과)
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | `PRIMARY KEY` | 식별자 |
+| `device_id` | `INTEGER` | `FOREIGN KEY` | 장비 참조 |
+| `policy_id` | `INTEGER` | `FOREIGN KEY` | 정책 참조 |
+| `redundant_policy_ids` | `JSON` | `NOT NULL` | 중복된 정책 ID 리스트 (JSON) |
+| `redundancy_type` | `VARCHAR` | `NOT NULL` | 중복 유형 (covered_by, covers, exact_match) |
+| `confidence_score` | `FLOAT` | `NULLABLE` | 신뢰도 점수 (0.0 ~ 1.0) |
+| `created_at` | `DATETIME` | `NOT NULL` | 분석 생성 시간 |
 
 ### `notification_logs` Table (시스템 알림)
 | Column | Type | Constraints | Description |

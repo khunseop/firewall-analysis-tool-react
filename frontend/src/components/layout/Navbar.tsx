@@ -12,12 +12,12 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { to: '/', label: '대시보드', icon: LayoutDashboard, end: true },
-  { to: '/devices', label: '장비 관리', icon: Monitor },
-  { to: '/policies', label: '방화벽 정책', icon: Shield },
-  { to: '/objects', label: '오브젝트', icon: Package },
-  { to: '/analysis', label: '정책 분석', icon: SearchCode },
-  { to: '/schedules', label: '스케줄', icon: CalendarClock },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/devices', label: 'Devices', icon: Monitor },
+  { to: '/policies', label: 'Policies', icon: Shield },
+  { to: '/objects', label: 'Objects', icon: Package },
+  { to: '/analysis', label: 'Analysis', icon: SearchCode },
+  { to: '/schedules', label: 'Schedules', icon: CalendarClock },
 ]
 
 const VENDOR_DOT: Record<string, string> = {
@@ -105,7 +105,7 @@ function DevicePanel() {
         className="w-full flex items-center justify-between px-3 py-2 hover:bg-ds-surface-container-low/40 transition-colors"
       >
         <span className="text-[9px] font-bold uppercase tracking-widest text-ds-on-surface-variant">
-          장비 선택
+          Device Selection
         </span>
         <div className="flex items-center gap-1.5">
           {selectedIds.length > 0 && (
