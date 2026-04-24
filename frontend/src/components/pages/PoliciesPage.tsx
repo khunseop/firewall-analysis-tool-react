@@ -277,7 +277,7 @@ export function PoliciesPage() {
       </div>
 
       {/* Filter panel */}
-      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden shrink-0">
+      <div className="card rounded-xl overflow-hidden shrink-0">
         {/* 툴바 */}
         <div className="flex items-center gap-2 px-4 py-2.5">
           <button
@@ -344,7 +344,7 @@ export function PoliciesPage() {
 
       {/* Summary banner */}
       {summary && (
-        <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 shrink-0">
+        <div className="card rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 shrink-0">
           <span className="text-sm font-bold text-ds-on-surface">총 {summary.total.toLocaleString()}건</span>
           <span className="flex items-center gap-1 text-xs font-semibold text-green-700"><span className="w-2 h-2 rounded-full bg-green-500" />허용 {summary.allow.toLocaleString()}</span>
           <span className="flex items-center gap-1 text-xs font-semibold text-red-700"><span className="w-2 h-2 rounded-full bg-red-500" />차단 {summary.deny.toLocaleString()}</span>
@@ -355,7 +355,7 @@ export function PoliciesPage() {
       )}
 
       {/* Results grid */}
-      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden flex-1 min-h-0">
+      <div className="card rounded-xl overflow-hidden flex-1 min-h-0">
         <AgGridWrapper<Policy>
           ref={gridRef}
           columnDefs={columnDefs}

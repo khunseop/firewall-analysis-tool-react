@@ -457,7 +457,7 @@ export function SettingsPage() {
       </div>
 
       {/* Settings panel */}
-      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden">
+      <div className="card rounded-xl overflow-hidden">
         {/* Tab bar */}
         <div className="flex items-center border-b border-ds-outline-variant/8 px-4 pt-2">
           {TABS.map((tab) => (

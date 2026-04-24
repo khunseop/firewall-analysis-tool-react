@@ -249,7 +249,7 @@ export function DevicesPage() {
 
       {/* KPI */}
       <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+        <div className="card rounded-xl px-4 py-3.5">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">전체 장비</p>
           <p className="text-2xl font-bold tabular-nums text-ds-on-surface mt-1.5">
             {isLoading ? '…' : syncCounts.total}
@@ -263,7 +263,7 @@ export function DevicesPage() {
           <p className="text-[10px] text-ds-on-surface-variant/60 mt-1">{syncCounts.synced}대 동기화 완료</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+        <div className="card rounded-xl px-4 py-3.5">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">동기화 완료</p>
           <p className="text-2xl font-bold tabular-nums text-emerald-600 mt-1.5">
             {isLoading ? '…' : syncCounts.synced}
@@ -271,7 +271,7 @@ export function DevicesPage() {
           <p className="text-[10px] text-ds-on-surface-variant/60 mt-3">정상 수집 장비</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+        <div className="card rounded-xl px-4 py-3.5">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">동기화 중</p>
           <p className={`text-2xl font-bold tabular-nums mt-1.5 ${syncCounts.syncing > 0 ? 'text-ds-tertiary' : 'text-ds-on-surface'}`}>
             {isLoading ? '…' : syncCounts.syncing}
@@ -281,7 +281,7 @@ export function DevicesPage() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+        <div className="card rounded-xl px-4 py-3.5">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">오류</p>
           <p className={`text-2xl font-bold tabular-nums mt-1.5 ${syncCounts.error > 0 ? 'text-ds-error' : 'text-ds-on-surface'}`}>
             {isLoading ? '…' : syncCounts.error}
@@ -293,7 +293,7 @@ export function DevicesPage() {
       </div>
 
       {/* 장비 테이블 */}
-      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm flex flex-col overflow-hidden">
+      <div className="card rounded-xl flex flex-col overflow-hidden">
         <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-ds-outline-variant/8">
           <div className="flex items-center gap-3">
             <span className="text-[13px] font-semibold text-ds-on-surface">등록된 장비</span>

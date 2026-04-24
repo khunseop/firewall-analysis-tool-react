@@ -101,7 +101,7 @@ export function NotificationsPage() {
       </div>
 
       {/* Search / date filter bar */}
-      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm px-5 py-4 flex flex-wrap gap-3 items-end shrink-0">
+      <div className="card rounded-xl px-5 py-4 flex flex-wrap gap-3 items-end shrink-0">
         {/* 검색어 */}
         <div className="flex-1 min-w-48 space-y-1">
           <label className="text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant">검색</label>
@@ -162,7 +162,7 @@ export function NotificationsPage() {
       </div>
 
       {/* Tabs + table */}
-      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden">
+      <div className="card rounded-xl overflow-hidden">
         {/* Tab bar */}
         <div className="flex items-center justify-between border-b border-ds-outline-variant/8 px-5 pt-2">
           <div className="flex items-center">

@@ -171,7 +171,7 @@ function ResultSummary({
   }, [analysisType, results, days])
 
   return (
-    <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm px-5 py-3 flex items-center justify-between">
+    <div className="card rounded-xl px-5 py-3 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
         <div>
@@ -284,7 +284,7 @@ export function AnalysisPage() {
       </div>
 
       {/* Config panel */}
-      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden">
+      <div className="card rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-ds-outline-variant/8">
         <span className="text-[13px] font-semibold text-ds-on-surface">분석 설정</span>
       </div>
@@ -384,7 +384,7 @@ export function AnalysisPage() {
             completedAt={resultCompletedAt}
             onExport={() => exportToExcel(results as Record<string, unknown>[], `분석결과_${analysisType}`).catch((e: Error) => toast.error(e.message))}
           />
-          <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden">
+          <div className="card rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 border-b border-ds-outline-variant/8">
               <span className="text-[13px] font-semibold text-ds-on-surface">분석 결과 상세</span>
               <span className="text-[11px] text-ds-on-surface-variant/60 tabular-nums">{results.length.toLocaleString()}건</span>

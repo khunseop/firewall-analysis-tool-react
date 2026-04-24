@@ -215,7 +215,7 @@ export function DashboardPage() {
 
       {/* KPI */}
       <div className="shrink-0 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+        <div className="card rounded-xl px-4 py-3.5">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">장비</p>
           <p className="text-2xl font-bold tabular-nums text-ds-on-surface mt-1.5">
             {isLoading ? '…' : formatNumber(totalDevices)}
@@ -229,7 +229,7 @@ export function DashboardPage() {
           <p className="text-[10px] text-ds-on-surface-variant/60 mt-1">{successDevices}대 동기화 완료</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+        <div className="card rounded-xl px-4 py-3.5">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">정책</p>
           <p className="text-2xl font-bold tabular-nums text-ds-on-surface mt-1.5">
             {isLoading ? '…' : formatNumber(totalPolicies)}
@@ -249,7 +249,7 @@ export function DashboardPage() {
           { label: '서비스',       value: stats?.total_services ?? 0 },
           { label: '서비스 그룹',  value: stats?.total_service_groups ?? 0 },
         ].map((s) => (
-          <div key={s.label} className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+          <div key={s.label} className="card rounded-xl px-4 py-3.5">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">{s.label}</p>
             <p className="text-2xl font-bold tabular-nums text-ds-on-surface mt-1.5">
               {isLoading ? '…' : formatNumber(s.value)}
@@ -259,7 +259,7 @@ export function DashboardPage() {
       </div>
 
       {/* 장비 현황 테이블 */}
-      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm flex flex-col overflow-hidden">
+      <div className="card rounded-xl flex flex-col overflow-hidden">
         <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-ds-outline-variant/8">
           <div className="flex items-center gap-3">
             <span className="text-[13px] font-semibold text-ds-on-surface">장비 현황</span>
