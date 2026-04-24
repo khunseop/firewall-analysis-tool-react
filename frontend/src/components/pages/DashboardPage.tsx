@@ -170,8 +170,14 @@ export function DashboardPage() {
   const activePct = totalPolicies > 0 ? Math.round(activePolicies / totalPolicies * 100) : 0
   const syncPct = totalDevices > 0 ? Math.round(successDevices / totalDevices * 100) : 0
 
+  const ROW_H = 44
+  const HEADER_H = 42
+  const gridHeight = rowData.length > 0
+    ? Math.min(rowData.length * ROW_H + HEADER_H, 10 * ROW_H + HEADER_H)
+    : 180
+
   return (
-    <div className="flex flex-col gap-6" style={{ height: 'calc(100vh - 3.25rem - 4rem)' }}>
+    <div className="flex flex-col gap-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Dashboard</h1>
@@ -253,7 +259,7 @@ export function DashboardPage() {
       </div>
 
       {/* 장비 현황 테이블 */}
-      <div className="flex-1 min-h-0 bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm flex flex-col overflow-hidden">
+      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm flex flex-col overflow-hidden">
         <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-ds-outline-variant/8">
           <div className="flex items-center gap-3">
             <span className="text-[13px] font-semibold text-ds-on-surface">장비 현황</span>
@@ -283,17 +289,16 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0">
-          <AgGridWrapper<DeviceRow>
-            ref={gridRef}
-            columnDefs={COLUMN_DEFS}
-            rowData={rowData}
-            getRowId={(p) => String(p.data.id)}
-            height="100%"
-            noRowsText="등록된 장비가 없습니다."
-            defaultColDefOverride={{ filter: false, resizable: true, sortable: true }}
-          />
-        </div>
+        <AgGridWrapper<DeviceRow>
+          ref={gridRef}
+          columnDefs={COLUMN_DEFS}
+          rowData={rowData}
+          getRowId={(p) => String(p.data.id)}
+          height={gridHeight}
+          noRowsText="등록된 장비가 없습니다."
+          defaultColDefOverride={{ filter: false, resizable: true, sortable: true }}
+          fitColumns
+        />
       </div>
     </div>
   )

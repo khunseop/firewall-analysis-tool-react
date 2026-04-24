@@ -1,6 +1,11 @@
 import { useRef, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { AgGridReact } from '@ag-grid-community/react'
-import { ModuleRegistry, type ColDef, type GridApi, type GridReadyEvent, type RowClassParams, type RowStyle, type RowClickedEvent } from '@ag-grid-community/core'
+import {
+  ModuleRegistry,
+  type ColDef, type GridApi, type GridReadyEvent,
+  type RowClassParams, type RowStyle, type RowClickedEvent,
+  type GridSizeChangedEvent,
+} from '@ag-grid-community/core'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
 import { CsvExportModule } from '@ag-grid-community/csv-export'
 
@@ -24,6 +29,8 @@ interface AgGridWrapperProps<T> {
   noRowsText?: string
   defaultColDefOverride?: Record<string, unknown>
   onRowClicked?: (event: RowClickedEvent<T>) => void
+  /** 컬럼을 컨테이너 너비에 맞게 분배 (기본값: false = 내용 기반 자동 너비) */
+  fitColumns?: boolean
 }
 
 function AgGridWrapperInner<T>(
@@ -38,6 +45,7 @@ function AgGridWrapperInner<T>(
     noRowsText = '데이터가 없습니다.',
     defaultColDefOverride,
     onRowClicked,
+    fitColumns = false,
   }: AgGridWrapperProps<T>,
   ref: React.ForwardedRef<AgGridWrapperHandle>
 ) {
@@ -58,12 +66,27 @@ function AgGridWrapperInner<T>(
   )
 
   const handleFirstDataRendered = useCallback(() => {
-    gridApiRef.current?.autoSizeAllColumns(false)
-  }, [])
+    if (fitColumns) {
+      gridApiRef.current?.sizeColumnsToFit()
+    } else {
+      gridApiRef.current?.autoSizeAllColumns(false)
+    }
+  }, [fitColumns])
 
   const handleModelUpdated = useCallback(() => {
-    if (rowData.length > 0) gridApiRef.current?.autoSizeAllColumns(false)
-  }, [rowData.length])
+    if (rowData.length === 0) return
+    if (fitColumns) {
+      gridApiRef.current?.sizeColumnsToFit()
+    } else {
+      gridApiRef.current?.autoSizeAllColumns(false)
+    }
+  }, [fitColumns, rowData.length])
+
+  const handleGridSizeChanged = useCallback((_e: GridSizeChangedEvent) => {
+    if (fitColumns) {
+      gridApiRef.current?.sizeColumnsToFit()
+    }
+  }, [fitColumns])
 
   return (
     <div className={`ag-theme-quartz w-full relative${onRowClicked ? ' ag-clickable-rows' : ''}`} style={{ height }}>
@@ -74,6 +97,7 @@ function AgGridWrapperInner<T>(
         onGridReady={handleGridReady}
         onFirstDataRendered={handleFirstDataRendered}
         onModelUpdated={handleModelUpdated}
+        onGridSizeChanged={handleGridSizeChanged}
         getRowStyle={getRowStyle}
         quickFilterText={quickFilterText}
         onRowClicked={onRowClicked}
