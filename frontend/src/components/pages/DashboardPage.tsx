@@ -1,30 +1,30 @@
 import { useRef, useCallback, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { RefreshCw, Router, ShieldCheck, Database, Network, AlertTriangle, Search, CheckCircle2, Loader2, XCircle, Clock, Layers } from 'lucide-react'
+import { RefreshCw, Search, XCircle, AlertTriangle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import type { GridApi } from '@ag-grid-community/core'
 import type { ColDef } from '@ag-grid-community/core'
+import type { GridApi } from '@ag-grid-community/core'
 import { AgGridWrapper, type AgGridWrapperHandle } from '@/components/shared/AgGridWrapper'
 import { getDashboardStats, type DeviceStats } from '@/api/devices'
 import { useSyncStatusWebSocket } from '@/hooks/useWebSocket'
 import { formatNumber, formatRelativeTime } from '@/lib/utils'
 
+const VENDOR_BADGE: Record<string, string> = {
+  paloalto: 'bg-orange-50 text-orange-600 border border-orange-100',
+  ngf:      'bg-blue-50 text-blue-600 border border-blue-100',
+  mf2:      'bg-cyan-50 text-cyan-600 border border-cyan-100',
+  mock:     'bg-gray-50 text-gray-500 border border-gray-100',
+}
 const VENDOR_LABELS: Record<string, string> = {
   paloalto: 'PaloAlto', ngf: 'NGF', mf2: 'MF2', mock: 'Mock',
 }
-const VENDOR_BADGE: Record<string, string> = {
-  paloalto: 'bg-orange-100 text-orange-700',
-  ngf:      'bg-blue-100 text-blue-700',
-  mf2:      'bg-cyan-100 text-cyan-700',
-  mock:     'bg-gray-100 text-gray-600',
-}
 
-const STATUS_CONFIG: Record<string, { label: string; classes: string; dotColor: string }> = {
-  success:     { label: '완료',   classes: 'bg-ds-secondary-container text-ds-on-secondary-container', dotColor: 'bg-green-500' },
-  in_progress: { label: '진행중', classes: 'bg-ds-tertiary/10 text-ds-tertiary', dotColor: 'bg-ds-tertiary animate-pulse' },
-  pending:     { label: '대기중', classes: 'bg-ds-surface-container text-ds-on-surface-variant',   dotColor: 'bg-ds-outline' },
-  failure:     { label: '실패',   classes: 'bg-ds-error-container/20 text-ds-error',     dotColor: 'bg-ds-error' },
-  error:       { label: '오류',   classes: 'bg-ds-error-container/20 text-ds-error',     dotColor: 'bg-ds-error' },
+const STATUS_CONFIG: Record<string, { label: string; dot: string; text: string }> = {
+  success:     { label: '완료',   dot: 'bg-emerald-500',             text: 'text-emerald-700' },
+  in_progress: { label: '진행중', dot: 'bg-ds-tertiary animate-pulse', text: 'text-ds-tertiary' },
+  pending:     { label: '대기',   dot: 'bg-ds-outline',               text: 'text-ds-on-surface-variant' },
+  failure:     { label: '실패',   dot: 'bg-ds-error',                 text: 'text-ds-error' },
+  error:       { label: '오류',   dot: 'bg-ds-error',                 text: 'text-ds-error' },
 }
 
 interface DeviceRow {
@@ -36,10 +36,7 @@ interface DeviceRow {
 
 function transformDeviceStats(d: DeviceStats): DeviceRow {
   return {
-    id: d.id,
-    name: d.name,
-    vendor: d.vendor,
-    ip_address: d.ip_address,
+    id: d.id, name: d.name, vendor: d.vendor, ip_address: d.ip_address,
     policies: d.policies ?? 0,
     active_policies: d.active_policies ?? 0,
     disabled_policies: d.disabled_policies ?? 0,
@@ -51,58 +48,87 @@ function transformDeviceStats(d: DeviceStats): DeviceRow {
   }
 }
 
-function MiniBar({ value, total, color = 'bg-ds-tertiary' }: { value: number; total: number; color?: string }) {
+function RateBar({ value, total }: { value: number; total: number }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-ds-surface-container-high rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+    <div className="flex items-center gap-2 w-full">
+      <div className="flex-1 h-1 bg-ds-surface-container-high rounded-full overflow-hidden">
+        <div className="h-full bg-ds-tertiary rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-[10px] font-semibold text-ds-on-surface-variant w-8 text-right">{pct}%</span>
+      <span className="text-[10px] font-semibold tabular-nums text-ds-on-surface-variant w-7 text-right">{pct}%</span>
     </div>
   )
 }
 
 const COLUMN_DEFS: ColDef<DeviceRow>[] = [
-  { field: 'name', headerName: '장비명', filter: 'agTextColumnFilter', width: 160 },
-  { field: 'vendor', headerName: '벤더', filter: 'agTextColumnFilter', width: 100,
-    cellRenderer: (p: { value: string }) => {
-      const cls = VENDOR_BADGE[p.value?.toLowerCase()] ?? 'bg-gray-100 text-gray-600'
-      return <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${cls}`}>{VENDOR_LABELS[p.value?.toLowerCase()] ?? p.value}</span>
-    },
-  },
-  { field: 'policies', headerName: '전체 정책', filter: 'agNumberColumnFilter', width: 100, valueFormatter: (p) => formatNumber(p.value) },
-  { field: 'active_policies', headerName: '활성', filter: 'agNumberColumnFilter', width: 80, valueFormatter: (p) => formatNumber(p.value) },
-  { field: 'disabled_policies', headerName: '비활성', filter: 'agNumberColumnFilter', width: 80, valueFormatter: (p) => formatNumber(p.value) },
   {
-    headerName: '활성률',
-    width: 140,
-    sortable: false,
-    cellRenderer: (p: { data: DeviceRow }) => (
-      <div className="w-full py-1">
-        <MiniBar value={p.data.active_policies} total={p.data.policies} />
-      </div>
-    ),
-  },
-  { field: 'network_objects', headerName: '네트워크 객체', filter: 'agNumberColumnFilter', width: 120, valueFormatter: (p) => formatNumber(p.value) },
-  { field: 'services', headerName: '서비스 객체', filter: 'agNumberColumnFilter', width: 110, valueFormatter: (p) => formatNumber(p.value) },
-  {
-    field: 'sync_time', headerName: '마지막 동기화', filter: 'agTextColumnFilter', width: 130,
-    valueFormatter: (p) => formatRelativeTime(p.value),
-  },
-  {
-    field: 'sync_status', headerName: '상태', width: 100,
-    cellRenderer: (params: { value: string | null; data: DeviceRow }) => {
-      const conf = STATUS_CONFIG[params.value ?? '']
-      if (!conf) return <span className="text-ds-on-surface-variant text-xs">-</span>
+    field: 'sync_status', headerName: '상태', width: 88, pinned: 'left',
+    cellRenderer: (p: { value: string | null; data: DeviceRow }) => {
+      const conf = STATUS_CONFIG[p.value ?? '']
+      if (!conf) return <span className="text-ds-on-surface-variant/40 text-xs">—</span>
       return (
-        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight ${conf.classes}`}
-          title={params.data.sync_step ?? ''}>
-          <span className={`w-1.5 h-1.5 rounded-full ${conf.dotColor}`} />
+        <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${conf.text}`} title={p.data.sync_step ?? ''}>
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${conf.dot}`} />
           {conf.label}
         </span>
       )
     },
+  },
+  {
+    field: 'name', headerName: '장비명', flex: 1, minWidth: 150, pinned: 'left',
+    cellRenderer: (p: { data: DeviceRow }) => (
+      <div className="flex flex-col justify-center leading-tight">
+        <span className="text-[12px] font-semibold text-ds-on-surface">{p.data.name}</span>
+        {p.data.ip_address && (
+          <span className="text-[10px] text-ds-on-surface-variant/60 font-mono mt-0.5">{p.data.ip_address}</span>
+        )}
+      </div>
+    ),
+  },
+  {
+    field: 'vendor', headerName: '벤더', width: 90,
+    cellRenderer: (p: { value: string }) => {
+      const cls = VENDOR_BADGE[p.value?.toLowerCase()] ?? 'bg-gray-50 text-gray-500 border border-gray-100'
+      return (
+        <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${cls}`}>
+          {VENDOR_LABELS[p.value?.toLowerCase()] ?? p.value}
+        </span>
+      )
+    },
+  },
+  {
+    headerName: '정책 / 활성률', width: 180,
+    cellRenderer: (p: { data: DeviceRow }) => (
+      <div className="flex flex-col justify-center gap-1 w-full py-1">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[12px] font-semibold tabular-nums text-ds-on-surface">{formatNumber(p.data.policies)}</span>
+          <span className="text-[10px] text-ds-on-surface-variant">({formatNumber(p.data.active_policies)} 활성)</span>
+        </div>
+        <RateBar value={p.data.active_policies} total={p.data.policies} />
+      </div>
+    ),
+  },
+  {
+    field: 'network_objects', headerName: 'Net Objects', width: 110,
+    cellRenderer: (p: { value: number }) => (
+      <span className="text-[12px] tabular-nums text-ds-on-surface">{formatNumber(p.value)}</span>
+    ),
+  },
+  {
+    field: 'services', headerName: 'Services', width: 95,
+    cellRenderer: (p: { value: number }) => (
+      <span className="text-[12px] tabular-nums text-ds-on-surface">{formatNumber(p.value)}</span>
+    ),
+  },
+  {
+    headerName: '사용률', width: 80,
+    cellRenderer: () => (
+      <span className="text-[11px] text-ds-on-surface-variant/40">—</span>
+    ),
+  },
+  {
+    field: 'sync_time', headerName: '마지막 동기화', width: 120,
+    valueFormatter: (p) => formatRelativeTime(p.value),
   },
 ]
 
@@ -124,8 +150,13 @@ export function DashboardPage() {
       if (api) {
         const node = api.getRowNode(String(msg.device_id))
         if (node?.data) {
-          node.setData({ ...node.data, sync_status: msg.status, sync_step: msg.step,
-            sync_time: msg.status === 'success' || msg.status === 'failure' ? new Date().toISOString() : node.data.sync_time,
+          node.setData({
+            ...node.data,
+            sync_status: msg.status,
+            sync_step: msg.step,
+            sync_time: msg.status === 'success' || msg.status === 'failure'
+              ? new Date().toISOString()
+              : node.data.sync_time,
           })
         }
       }
@@ -143,166 +174,141 @@ export function DashboardPage() {
   }
 
   const errorDevices = rowData.filter(d => d.sync_status === 'failure' || d.sync_status === 'error')
-
   const totalPolicies = stats?.total_policies ?? 0
   const activePolicies = stats?.total_active_policies ?? 0
   const totalDevices = stats?.total_devices ?? 0
   const successDevices = stats?.active_devices ?? 0
-
-  const STAT_CARDS = [
-    {
-      label: '전체 장비', value: totalDevices, icon: Router,
-      iconBg: 'bg-ds-primary-container', iconColor: 'text-ds-on-primary-container',
-      sub: null,
-      bar: {
-        value: successDevices,
-        total: totalDevices,
-        label: `동기화 성공률: ${totalDevices > 0 ? Math.round(successDevices/totalDevices*100) : 0}%`,
-        color: 'bg-green-500'
-      },
-    },
-    {
-      label: '전체 정책', value: totalPolicies, icon: ShieldCheck,
-      iconBg: 'bg-blue-100', iconColor: 'text-blue-700',
-      sub: null,
-      bar: {
-        value: activePolicies,
-        total: totalPolicies,
-        label: `정책 활성률: ${totalPolicies > 0 ? Math.round(activePolicies/totalPolicies*100) : 0}%`,
-        color: 'bg-ds-tertiary'
-      },
-    },
-    {
-      label: '네트워크 객체', value: stats?.total_network_objects ?? 0,
-      icon: Network, iconBg: 'bg-ds-secondary-container', iconColor: 'text-ds-on-secondary-container',
-      sub: '일반 네트워크 객체', bar: null,
-    },
-    {
-      label: '네트워크 그룹', value: stats?.total_network_groups ?? 0,
-      icon: Layers, iconBg: 'bg-cyan-100', iconColor: 'text-cyan-700',
-      sub: '네트워크 그룹 객체', bar: null,
-    },
-    {
-      label: '서비스', value: stats?.total_services ?? 0,
-      icon: Database, iconBg: 'bg-ds-primary-container', iconColor: 'text-ds-on-primary-container',
-      sub: '일반 서비스 객체', bar: null,
-    },
-    {
-      label: '서비스 그룹', value: stats?.total_service_groups ?? 0,
-      icon: Layers, iconBg: 'bg-purple-100', iconColor: 'text-purple-700',
-      sub: '서비스 그룹 객체', bar: null,
-    },
-  ]
+  const activePct = totalPolicies > 0 ? Math.round(activePolicies / totalPolicies * 100) : 0
+  const syncPct = totalDevices > 0 ? Math.round(successDevices / totalDevices * 100) : 0
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-6" style={{ height: 'calc(100vh - 3.25rem - 4rem)' }}>
       {/* Header */}
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Dashboard</h1>
-        </div>
+      <div className="flex items-center justify-between shrink-0">
+        <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Dashboard</h1>
         <button
           onClick={() => queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })}
-          className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-ds-on-surface bg-white rounded-xl shadow-sm border border-ds-outline-variant/10 hover:bg-ds-surface-container-low transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-ds-on-surface-variant bg-white rounded-lg shadow-sm border border-ds-outline-variant/10 hover:text-ds-on-surface hover:bg-ds-surface-container-low transition-all"
         >
-          <RefreshCw className="w-4 h-4" />
-          현황 갱신
+          <RefreshCw className="w-3.5 h-3.5" />
+          갱신
         </button>
       </div>
 
-      {/* 오류 장비 경고 배너 */}
+      {/* Error banner */}
       {errorDevices.length > 0 && (
-        <div className="flex items-center justify-between bg-ds-error-container/10 border border-ds-error/20 rounded-2xl px-6 py-4 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-ds-error-container/20 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-5 h-5 text-ds-error" />
-            </div>
+        <div className="shrink-0 flex items-center justify-between bg-ds-error/4 border border-ds-error/15 rounded-xl px-5 py-3">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-4 h-4 text-ds-error shrink-0" />
             <div>
-              <p className="text-sm font-bold text-ds-error">
-                {errorDevices.length}개 장비의 동기화가 중단되었습니다
+              <p className="text-[13px] font-semibold text-ds-error">
+                {errorDevices.length}개 장비 동기화 오류
               </p>
-              <p className="text-xs text-ds-error/70 mt-0.5 font-medium">
+              <p className="text-[11px] text-ds-error/60 mt-0.5">
                 {errorDevices.map(d => d.name).join(', ')}
               </p>
             </div>
           </div>
           <button
             onClick={() => navigate('/devices')}
-            className="px-4 py-2 bg-ds-error text-white text-xs font-bold rounded-lg hover:brightness-110 transition-all shrink-0"
+            className="px-3 py-1.5 bg-ds-error text-white text-[12px] font-semibold rounded-lg hover:brightness-110 transition-all shrink-0"
           >
-            장비 진단하러 가기
+            장비 확인
           </button>
         </div>
       )}
 
-      {/* Stat cards — 6개 (2+4 or 3+3 grid) */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {STAT_CARDS.map((card) => {
-          const Icon = card.icon
-          return (
-            <div key={card.label} className="bg-white p-5 rounded-2xl shadow-sm border border-ds-outline-variant/5">
-              <div className="flex justify-between items-start">
-                <div className="flex-1 min-w-0">
-                  <p className="text-ds-on-surface-variant font-bold text-[9px] uppercase tracking-widest">{card.label}</p>
-                  <h3 className="text-3xl font-extrabold text-ds-on-surface mt-2 font-headline tracking-tighter">
-                    {isLoading ? '…' : formatNumber(card.value)}
-                  </h3>
-                </div>
-                <div className={`p-2.5 ${card.iconBg} rounded-xl ${card.iconColor} shrink-0 ml-2 shadow-inner`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-              </div>
-              {card.bar && (
-                <div className="mt-4">
-                  <MiniBar value={card.bar.value} total={card.bar.total} color={card.bar.color} />
-                  <p className="text-[10px] text-ds-on-surface-variant mt-2 font-bold tracking-tight">{card.bar.label}</p>
-                </div>
-              )}
-              {card.sub && !card.bar && (
-                <p className="text-[10px] text-ds-on-surface-variant mt-4 font-semibold">{card.sub}</p>
-              )}
+      {/* KPI Strip */}
+      <div className="shrink-0 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+        {/* Devices */}
+        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">Devices</p>
+          <p className="text-2xl font-bold tabular-nums text-ds-on-surface mt-1.5">
+            {isLoading ? '…' : formatNumber(totalDevices)}
+          </p>
+          <div className="mt-2.5 flex items-center gap-2">
+            <div className="flex-1 h-1 bg-ds-surface-container-high rounded-full overflow-hidden">
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${syncPct}%` }} />
             </div>
-          )
-        })}
+            <span className="text-[10px] font-semibold tabular-nums text-ds-on-surface-variant">{syncPct}%</span>
+          </div>
+          <p className="text-[10px] text-ds-on-surface-variant/60 mt-1">{successDevices} synced</p>
+        </div>
+
+        {/* Policies */}
+        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">Policies</p>
+          <p className="text-2xl font-bold tabular-nums text-ds-on-surface mt-1.5">
+            {isLoading ? '…' : formatNumber(totalPolicies)}
+          </p>
+          <div className="mt-2.5 flex items-center gap-2">
+            <div className="flex-1 h-1 bg-ds-surface-container-high rounded-full overflow-hidden">
+              <div className="h-full bg-ds-tertiary rounded-full" style={{ width: `${activePct}%` }} />
+            </div>
+            <span className="text-[10px] font-semibold tabular-nums text-ds-on-surface-variant">{activePct}%</span>
+          </div>
+          <p className="text-[10px] text-ds-on-surface-variant/60 mt-1">{formatNumber(activePolicies)} active</p>
+        </div>
+
+        {/* 4 object stats */}
+        {[
+          { label: 'Net Objects',  value: stats?.total_network_objects ?? 0 },
+          { label: 'Net Groups',   value: stats?.total_network_groups ?? 0 },
+          { label: 'Services',     value: stats?.total_services ?? 0 },
+          { label: 'Svc Groups',   value: stats?.total_service_groups ?? 0 },
+        ].map((s) => (
+          <div key={s.label} className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">{s.label}</p>
+            <p className="text-2xl font-bold tabular-nums text-ds-on-surface mt-1.5">
+              {isLoading ? '…' : formatNumber(s.value)}
+            </p>
+          </div>
+        ))}
       </div>
 
-      {/* 장비별 통계 그리드 */}
-      <div className="bg-white rounded-2xl shadow-sm border border-ds-outline-variant/5 overflow-hidden">
-        <div className="flex items-center justify-between px-8 py-5 border-b border-ds-outline-variant/5 bg-ds-surface-container-low/20">
-          <div>
-            <h2 className="text-lg font-bold text-ds-on-surface font-headline">장비별 실시간 현황</h2>
-            <p className="text-xs text-ds-on-surface-variant mt-1 font-medium">방화벽 엔진과 실시간 데이터 동기화 중</p>
+      {/* Device table — fills remaining viewport */}
+      <div className="flex-1 min-h-0 bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm flex flex-col overflow-hidden">
+        {/* Table header */}
+        <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-ds-outline-variant/8">
+          <div className="flex items-center gap-3">
+            <span className="text-[13px] font-semibold text-ds-on-surface">장비 현황</span>
+            <span className="text-[11px] text-ds-on-surface-variant/50 tabular-nums">
+              {rowData.length > 0 ? `${rowData.length}대` : ''}
+            </span>
           </div>
-          <div className="flex items-center gap-4">
-            {/* 그리드 검색 */}
-            <div className="flex items-center gap-2 bg-ds-surface-container-low rounded-xl px-3 py-2 border border-ds-outline-variant/15">
-              <Search className="w-3.5 h-3.5 text-ds-on-surface-variant shrink-0" />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 bg-ds-surface-container-low rounded-lg px-2.5 py-1.5 border border-ds-outline-variant/10">
+              <Search className="w-3 h-3 text-ds-on-surface-variant shrink-0" />
               <input
                 value={gridSearch}
                 onChange={(e) => handleGridSearchChange(e.target.value)}
-                placeholder="장비명, 그룹, 상태 검색…"
-                className="text-[12px] bg-transparent outline-none text-ds-on-surface placeholder:text-ds-on-surface-variant/50 w-44"
+                placeholder="장비명, IP 검색"
+                className="text-[12px] bg-transparent outline-none text-ds-on-surface placeholder:text-ds-on-surface-variant/40 w-36"
               />
               {gridSearch && (
-                <button onClick={() => handleGridSearchChange('')} className="shrink-0">
-                  <XCircle className="w-3.5 h-3.5 text-ds-on-surface-variant hover:text-ds-on-surface" />
+                <button onClick={() => handleGridSearchChange('')}>
+                  <XCircle className="w-3 h-3 text-ds-on-surface-variant hover:text-ds-on-surface" />
                 </button>
               )}
             </div>
-            <div className="flex items-center text-[11px] font-bold text-green-600 bg-green-50 px-3.5 py-1.5 rounded-full border border-green-100 uppercase tracking-widest">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2 animate-pulse" />
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Live
             </div>
           </div>
         </div>
-        <AgGridWrapper<DeviceRow>
-          ref={gridRef}
-          columnDefs={COLUMN_DEFS}
-          rowData={rowData}
-          getRowId={(p) => String(p.data.id)}
-          height={rowData.length > 0 ? Math.min(rowData.length * 52 + 50, 400) : 240}
-          noRowsText="등록된 장비가 없습니다."
-        />
+
+        {/* Grid — flex-1 fills remaining space */}
+        <div className="flex-1 min-h-0">
+          <AgGridWrapper<DeviceRow>
+            ref={gridRef}
+            columnDefs={COLUMN_DEFS}
+            rowData={rowData}
+            getRowId={(p) => String(p.data.id)}
+            height="100%"
+            noRowsText="등록된 장비가 없습니다."
+          />
+        </div>
       </div>
     </div>
   )
