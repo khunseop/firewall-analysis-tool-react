@@ -1,6 +1,6 @@
 import { useRef, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { AgGridReact } from '@ag-grid-community/react'
-import { ModuleRegistry, type ColDef, type GridApi, type GridReadyEvent, type RowClassParams, type RowStyle } from '@ag-grid-community/core'
+import { ModuleRegistry, type ColDef, type GridApi, type GridReadyEvent, type RowClassParams, type RowStyle, type RowClickedEvent } from '@ag-grid-community/core'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
 import { CsvExportModule } from '@ag-grid-community/csv-export'
 
@@ -23,6 +23,7 @@ interface AgGridWrapperProps<T> {
   height?: string | number
   noRowsText?: string
   defaultColDefOverride?: Record<string, unknown>
+  onRowClicked?: (event: RowClickedEvent<T>) => void
 }
 
 function AgGridWrapperInner<T>(
@@ -36,6 +37,7 @@ function AgGridWrapperInner<T>(
     height = 'calc(100vh - 200px)',
     noRowsText = '데이터가 없습니다.',
     defaultColDefOverride,
+    onRowClicked,
   }: AgGridWrapperProps<T>,
   ref: React.ForwardedRef<AgGridWrapperHandle>
 ) {
@@ -60,7 +62,7 @@ function AgGridWrapperInner<T>(
   }, [])
 
   return (
-    <div className="ag-theme-quartz w-full relative" style={{ height }}>
+    <div className={`ag-theme-quartz w-full relative${onRowClicked ? ' ag-clickable-rows' : ''}`} style={{ height }}>
       <AgGridReact<T>
         columnDefs={columnDefs}
         rowData={rowData}
@@ -69,6 +71,7 @@ function AgGridWrapperInner<T>(
         onFirstDataRendered={handleFirstDataRendered}
         getRowStyle={getRowStyle}
         quickFilterText={quickFilterText}
+        onRowClicked={onRowClicked}
         defaultColDef={{
           resizable: true,
           filter: true,

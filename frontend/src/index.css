@@ -191,3 +191,8 @@
 .ag-theme-quartz .ag-pinned-left-cols-container {
   border-right: 2px solid rgba(148, 163, 184, 0.25) !important;
 }
+
+/* Clickable rows cursor */
+.ag-theme-quartz.ag-clickable-rows .ag-row {
+  cursor: pointer;
+}

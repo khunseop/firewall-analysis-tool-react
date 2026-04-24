@@ -176,14 +176,19 @@ export function ObjectsPage() {
       ),
     },
     {
-      field: 'members', headerName: '멤버', filter: 'agTextColumnFilter', flex: 1, autoHeight: true,
+      field: 'members', headerName: '멤버', filter: 'agTextColumnFilter', flex: 1,
       cellRenderer: (p: { value: string }) => {
         const members = (p.value ?? '').split(',').map((m: string) => m.trim()).filter(Boolean)
+        if (members.length === 0) return <span className="text-[11px] text-ds-on-surface-variant">-</span>
+        const MAX = 3
+        const visible = members.slice(0, MAX)
+        const extra = members.length - MAX
         return (
-          <div className="flex flex-wrap gap-1 py-1">
-            {members.map((m, i) => (
-              <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono bg-ds-secondary-container text-ds-tertiary">{m}</span>
+          <div className="flex items-center gap-1 overflow-hidden">
+            {visible.map((m, i) => (
+              <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono bg-ds-secondary-container text-ds-tertiary whitespace-nowrap shrink-0">{m}</span>
             ))}
+            {extra > 0 && <span className="text-[10px] font-semibold text-ds-on-surface-variant whitespace-nowrap shrink-0">+{extra}</span>}
           </div>
         )
       },
@@ -219,14 +224,19 @@ export function ObjectsPage() {
       ),
     },
     {
-      field: 'members', headerName: '멤버', filter: 'agTextColumnFilter', flex: 1, autoHeight: true,
+      field: 'members', headerName: '멤버', filter: 'agTextColumnFilter', flex: 1,
       cellRenderer: (p: { value: string }) => {
         const members = (p.value ?? '').split(',').map((m: string) => m.trim()).filter(Boolean)
+        if (members.length === 0) return <span className="text-[11px] text-ds-on-surface-variant">-</span>
+        const MAX = 3
+        const visible = members.slice(0, MAX)
+        const extra = members.length - MAX
         return (
-          <div className="flex flex-wrap gap-1 py-1">
-            {members.map((m, i) => (
-              <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono bg-ds-surface-container text-ds-on-surface-variant">{m}</span>
+          <div className="flex items-center gap-1 overflow-hidden">
+            {visible.map((m, i) => (
+              <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono bg-ds-surface-container text-ds-on-surface-variant whitespace-nowrap shrink-0">{m}</span>
             ))}
+            {extra > 0 && <span className="text-[10px] font-semibold text-ds-on-surface-variant whitespace-nowrap shrink-0">+{extra}</span>}
           </div>
         )
       },

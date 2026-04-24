@@ -3,7 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Download, SlidersHorizontal, AlertTriangle, X, History } from 'lucide-react'
-import type { ColDef } from '@ag-grid-community/core'
+import type { ColDef, RowClickedEvent } from '@ag-grid-community/core'
 import { AgGridWrapper, type AgGridWrapperHandle } from '@/components/shared/AgGridWrapper'
 import { listDevices } from '@/api/devices'
 import {
@@ -13,6 +13,7 @@ import {
 import { daysSinceHit } from '@/lib/utils'
 import { ObjectDetailModal } from '@/components/shared/ObjectDetailModal'
 import { PolicyHistoryModal } from '@/components/shared/PolicyHistoryModal'
+import { PolicyDetailModal } from '@/components/shared/PolicyDetailModal'
 import { QueryBuilder, buildRequestFromConditions, type Condition } from '@/components/shared/QueryBuilder'
 import { useDeviceStore } from '@/store/deviceStore'
 
@@ -30,47 +31,22 @@ const CHANGE_META: Record<string, { label: string; cls: string }> = {
   hit_date_updated: { label: '히트', cls: 'bg-gray-100   text-gray-500' },
 }
 
-/** 쉼표/공백 구분 문자열 → chip 태그 렌더러 */
-function TagCell({
-  value, isClickable, onClickName, maxVisible = 3,
-}: {
-  value: string
-  isClickable?: (name: string) => boolean
-  onClickName?: (name: string) => void
-  maxVisible?: number
-}) {
-  const [expanded, setExpanded] = useState(false)
+/** 그리드 셀용 인라인 태그 (고정 높이, 최대 2개 + 개수) */
+function InlineTagCell({ value }: { value: string }) {
   const names = (value ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   if (names.length === 0) return <span className="text-[11px] text-ds-on-surface-variant">-</span>
-
-  const visible = expanded ? names : names.slice(0, maxVisible)
-  const overflow = names.length - maxVisible
-
+  const MAX = 2
+  const visible = names.slice(0, MAX)
+  const extra = names.length - MAX
   return (
-    <div className="flex flex-wrap gap-1 items-center py-1">
-      {visible.map((name, i) => {
-        const clickable = isClickable?.(name) && onClickName
-        return (
-          <span
-            key={i}
-            onClick={clickable ? () => onClickName!(name) : undefined}
-            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono leading-tight
-              ${clickable
-                ? 'bg-ds-secondary-container text-ds-tertiary cursor-pointer hover:bg-ds-primary-container transition-colors'
-                : 'bg-ds-surface-container text-ds-on-surface'
-              }`}
-          >
-            {name}
-          </span>
-        )
-      })}
-      {!expanded && overflow > 0 && (
-        <button
-          onClick={() => setExpanded(true)}
-          className="text-[10px] font-semibold text-ds-tertiary bg-ds-tertiary/5 rounded px-1.5 py-0.5 hover:bg-ds-tertiary/10"
-        >
-          +{overflow}
-        </button>
+    <div className="flex items-center gap-1 overflow-hidden">
+      {visible.map((name, i) => (
+        <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono bg-ds-surface-container text-ds-on-surface whitespace-nowrap shrink-0">
+          {name}
+        </span>
+      ))}
+      {extra > 0 && (
+        <span className="text-[10px] font-semibold text-ds-on-surface-variant whitespace-nowrap shrink-0">+{extra}</span>
       )}
     </div>
   )
@@ -104,6 +80,7 @@ export function PoliciesPage() {
   const [changeLogMap, setChangeLogMap] = useState<Map<string, ChangeLogEntry>>(new Map())
   const [objectModal, setObjectModal] = useState<{ deviceId: number; name: string } | null>(null)
   const [historyModal, setHistoryModal] = useState<{ deviceId: number; ruleName: string } | null>(null)
+  const [detailModal, setDetailModal] = useState<Policy | null>(null)
 
   const { data: devices = [] } = useQuery({ queryKey: ['devices'], queryFn: listDevices })
 
@@ -191,13 +168,9 @@ export function PoliciesPage() {
     [devices]
   )
 
-  const makeCellRenderer = () => (p: { value: string; data: Policy }) => (
-    <TagCell
-      value={p.value}
-      isClickable={(name) => validObjectNames.has(name)}
-      onClickName={(name) => setObjectModal({ deviceId: p.data.device_id, name })}
-    />
-  )
+  const handleRowClick = (event: RowClickedEvent<Policy>) => {
+    if (event.data) setDetailModal(event.data)
+  }
 
   const columnDefs: ColDef<Policy>[] = [
     {
@@ -253,21 +226,20 @@ export function PoliciesPage() {
         </span>
       ),
     },
-    { field: 'source',      headerName: '출발지', flex: 1, minWidth: 140, autoHeight: true, cellRenderer: makeCellRenderer() },
-    { field: 'destination', headerName: '목적지', flex: 1, minWidth: 140, autoHeight: true, cellRenderer: makeCellRenderer() },
-    { field: 'service',     headerName: '서비스', minWidth: 120, autoHeight: true, cellRenderer: makeCellRenderer() },
+    { field: 'source',      headerName: '출발지', flex: 1, minWidth: 140, cellRenderer: (p: { value: string }) => <InlineTagCell value={p.value} /> },
+    { field: 'destination', headerName: '목적지', flex: 1, minWidth: 140, cellRenderer: (p: { value: string }) => <InlineTagCell value={p.value} /> },
+    { field: 'service',     headerName: '서비스', minWidth: 120,           cellRenderer: (p: { value: string }) => <InlineTagCell value={p.value} /> },
     {
-      field: 'user', headerName: '사용자', minWidth: 100, autoHeight: true,
+      field: 'user', headerName: '사용자', minWidth: 100,
       cellRenderer: (p: { value: string | null }) => {
         if (!p.value) return <span className="text-[11px] text-ds-on-surface-variant">-</span>
         const users = p.value.split(',').map((u) => u.trim()).filter(Boolean)
-        if (users.length === 1) return <span className="font-mono text-xs text-ds-on-surface">{users[0]}</span>
+        const first = users[0]
+        const extra = users.length - 1
         return (
-          <div className="flex flex-col gap-0.5 py-1">
-            {users.map((u, i) => (
-              <span key={i} className="font-mono text-[11px] text-ds-on-surface leading-tight">{u}</span>
-            ))}
-          </div>
+          <span className="font-mono text-xs text-ds-on-surface">
+            {first}{extra > 0 && <span className="text-ds-on-surface-variant"> +{extra}</span>}
+          </span>
         )
       },
     },
@@ -388,6 +360,7 @@ export function PoliciesPage() {
           height="100%"
           noRowsText="장비를 선택하고 검색 버튼을 클릭하세요."
           defaultColDefOverride={{ filter: false }}
+          onRowClicked={handleRowClick}
         />
       </div>
 
@@ -404,6 +377,23 @@ export function PoliciesPage() {
           deviceId={historyModal.deviceId}
           ruleName={historyModal.ruleName}
           onClose={() => setHistoryModal(null)}
+        />
+      )}
+
+      {detailModal && (
+        <PolicyDetailModal
+          policy={detailModal}
+          deviceName={deviceNameMap.get(detailModal.device_id) ?? String(detailModal.device_id)}
+          validObjectNames={validObjectNames}
+          onObjectClick={(deviceId, name) => {
+            setDetailModal(null)
+            setObjectModal({ deviceId, name })
+          }}
+          onHistoryClick={(deviceId, ruleName) => {
+            setDetailModal(null)
+            setHistoryModal({ deviceId, ruleName })
+          }}
+          onClose={() => setDetailModal(null)}
         />
       )}
     </div>
