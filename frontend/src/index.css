@@ -115,21 +115,23 @@
 
 /* AG Grid custom theme overrides — Precision Sentinel */
 .ag-theme-quartz {
-  --ag-background-color: #ffffff;
-  --ag-odd-row-background-color: rgba(248, 250, 252, 0.7);
-  --ag-header-background-color: rgba(241, 245, 249, 0.95);
-  --ag-header-foreground-color: #475569;
-  --ag-row-hover-color: rgba(219, 234, 254, 0.35);
+  --ag-background-color: transparent;
+  --ag-odd-row-background-color: transparent;
+  --ag-header-background-color: rgba(240, 244, 247, 0.3);
+  --ag-header-foreground-color: rgba(86, 97, 102, 0.6);
+  --ag-row-hover-color: rgba(240, 244, 247, 0.3);
   --ag-border-color: transparent;
   --ag-borders: none;
-  --ag-row-border-color: rgba(148, 163, 184, 0.18);
+  --ag-row-border-color: rgba(169, 180, 185, 0.08);
   --ag-row-border-width: 1px;
-  --ag-cell-horizontal-border: solid rgba(148, 163, 184, 0.1);
+  --ag-cell-horizontal-border: none;
+  --ag-header-column-separator-display: none;
+  --ag-header-column-resize-handle-display: none;
   --ag-font-family: 'Inter', sans-serif;
   --ag-font-size: 12px;
   --ag-row-height: 44px;
   --ag-header-height: 40px;
-  --ag-cell-horizontal-padding: 12px;
+  --ag-cell-horizontal-padding: 20px;
   --ag-wrapper-border-radius: 0;
   --ag-grid-size: 4px;
   --ag-list-item-height: 32px;
@@ -143,7 +145,7 @@
   box-shadow: none !important;
 }
 .ag-theme-quartz .ag-header {
-  border-bottom: 1px solid rgba(148, 163, 184, 0.28) !important;
+  border-bottom: 1px solid rgba(169, 180, 185, 0.08) !important;
 }
 
 /* Table-like header */
@@ -152,15 +154,21 @@
   font-weight: 700 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.12em !important;
-  color: #475569 !important;
+  color: rgba(86, 97, 102, 0.6) !important;
 }
 .ag-theme-quartz .ag-header-cell {
-  border-right: 1px solid rgba(148, 163, 184, 0.12) !important;
+  border-right: none !important;
+}
+.ag-theme-quartz .ag-header-cell-resize::after {
+  background: transparent !important;
+}
+.ag-theme-quartz .ag-header-cell:hover .ag-header-cell-resize::after {
+  background: rgba(169, 180, 185, 0.25) !important;
 }
 
 /* Row divider */
 .ag-theme-quartz .ag-row {
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18) !important;
+  border-bottom: 1px solid rgba(169, 180, 185, 0.08) !important;
   border-top: none !important;
 }
 
