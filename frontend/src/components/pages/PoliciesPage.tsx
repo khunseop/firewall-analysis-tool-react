@@ -272,20 +272,20 @@ export function PoliciesPage() {
   return (
     <div className="flex flex-col gap-3 h-[calc(100vh-64px)]">
       {/* Page header */}
-      <header className="shrink-0">
+      <div className="flex items-center justify-between shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Policies</h1>
-      </header>
+      </div>
 
       {/* Filter panel */}
-      <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow overflow-hidden border border-ds-outline-variant/10 shrink-0">
+      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden shrink-0">
         {/* 툴바 */}
         <div className="flex items-center gap-2 px-4 py-2.5">
           <button
             onClick={() => setFiltersOpen((v) => !v)}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-md transition-colors ${
+            className={`flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1.5 rounded-lg transition-colors ${
               filtersOpen || hasConditions
                 ? 'text-ds-tertiary bg-ds-tertiary/10'
-                : 'text-ds-on-surface-variant bg-ds-surface-container-low hover:text-ds-tertiary'
+                : 'text-ds-on-surface-variant bg-ds-surface-container-low hover:text-ds-tertiary border border-ds-outline-variant/10'
             }`}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -316,17 +316,17 @@ export function PoliciesPage() {
 
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
             {policies.length > 0 && (
-              <button onClick={handleExport} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-ds-on-surface-variant bg-ds-surface-container-low rounded-md hover:text-ds-on-surface transition-colors">
-                <Download className="w-3.5 h-3.5" /> Excel
+              <button onClick={handleExport} className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-ds-on-surface-variant bg-ds-surface-container-low rounded-lg border border-ds-outline-variant/10 hover:text-ds-on-surface transition-colors">
+                <Download className="w-3 h-3" /> Excel
               </button>
             )}
-            <button onClick={handleReset} className="text-xs font-semibold text-ds-on-surface-variant hover:text-ds-on-surface px-2.5 py-1.5 rounded-md hover:bg-ds-surface-container-low transition-colors">
+            <button onClick={handleReset} className="text-[12px] font-medium text-ds-on-surface-variant hover:text-ds-on-surface px-2.5 py-1.5 rounded-lg hover:bg-ds-surface-container-low transition-colors">
               초기화
             </button>
             <button
               onClick={handleSearch}
               disabled={deviceIds.length === 0 || searchMutation.isPending}
-              className="bg-ds-primary text-ds-on-primary text-xs font-bold px-4 py-1.5 rounded-md hover:brightness-110 transition-all disabled:opacity-50"
+              className="btn-primary-gradient text-ds-on-tertiary text-[12px] font-semibold px-4 py-1.5 rounded-lg shadow-sm hover:opacity-90 transition-all disabled:opacity-50"
             >
               {searchMutation.isPending ? '검색 중…' : '검색'}
             </button>
@@ -344,7 +344,7 @@ export function PoliciesPage() {
 
       {/* Summary banner */}
       {summary && (
-        <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 shrink-0">
+        <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 shrink-0">
           <span className="text-sm font-bold text-ds-on-surface">총 {summary.total.toLocaleString()}건</span>
           <span className="flex items-center gap-1 text-xs font-semibold text-green-700"><span className="w-2 h-2 rounded-full bg-green-500" />허용 {summary.allow.toLocaleString()}</span>
           <span className="flex items-center gap-1 text-xs font-semibold text-red-700"><span className="w-2 h-2 rounded-full bg-red-500" />차단 {summary.deny.toLocaleString()}</span>
@@ -355,7 +355,7 @@ export function PoliciesPage() {
       )}
 
       {/* Results grid */}
-      <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border overflow-hidden flex-1 min-h-0">
+      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden flex-1 min-h-0">
         <AgGridWrapper<Policy>
           ref={gridRef}
           columnDefs={columnDefs}

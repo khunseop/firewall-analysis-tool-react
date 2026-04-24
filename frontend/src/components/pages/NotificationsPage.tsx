@@ -94,14 +94,14 @@ export function NotificationsPage() {
   const hasActiveFilter = appliedSearch || appliedDateFrom || appliedDateTo
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Header */}
-      <div>
+      <div className="flex items-center justify-between shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Notifications</h1>
       </div>
 
       {/* Search / date filter bar */}
-      <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border px-5 py-4 flex flex-wrap gap-3 items-end">
+      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm px-5 py-4 flex flex-wrap gap-3 items-end shrink-0">
         {/* 검색어 */}
         <div className="flex-1 min-w-48 space-y-1">
           <label className="text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant">검색</label>
@@ -154,7 +154,7 @@ export function NotificationsPage() {
           </button>
           <button
             onClick={handleApply}
-            className="h-8 px-4 text-sm font-bold bg-ds-primary text-ds-on-primary rounded-md hover:brightness-110 transition-all"
+            className="h-8 px-4 text-[12px] font-semibold btn-primary-gradient text-ds-on-tertiary rounded-lg shadow-sm hover:opacity-90 transition-all"
           >
             검색
           </button>
@@ -162,15 +162,15 @@ export function NotificationsPage() {
       </div>
 
       {/* Tabs + table */}
-      <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border overflow-hidden">
+      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden">
         {/* Tab bar */}
-        <div className="flex items-center justify-between border-b border-ds-outline-variant/10 px-6 pt-2">
+        <div className="flex items-center justify-between border-b border-ds-outline-variant/8 px-5 pt-2">
           <div className="flex items-center">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-2.5 text-sm font-semibold font-headline tracking-tight transition-colors duration-200 border-b-2 -mb-px ${
+                className={`px-4 py-2.5 text-[13px] font-semibold tracking-tight transition-colors duration-200 border-b-2 -mb-px ${
                   activeTab === tab.key
                     ? 'text-ds-tertiary border-ds-tertiary'
                     : 'text-ds-on-surface-variant border-transparent hover:text-ds-on-surface'
@@ -204,49 +204,49 @@ export function NotificationsPage() {
           <>
             {/* Table */}
             <table className="w-full text-left border-collapse">
-              <thead className="bg-ds-surface-container-low/50">
-                <tr>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">시간</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">구분</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">타입</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">제목</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">장비</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">사용자</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">메시지</th>
+              <thead>
+                <tr className="border-b border-ds-outline-variant/8 bg-ds-surface-container-low/30">
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">시간</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">구분</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">타입</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">제목</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">장비</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">사용자</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">메시지</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-ds-outline-variant/10">
+              <tbody className="divide-y divide-ds-outline-variant/8">
                 {items.map((n) => {
                   const typeConf = TYPE_CONFIG[n.type] ?? TYPE_CONFIG.info
                   const Icon = typeConf.icon
                   const borderCls = CATEGORY_BORDER[n.category ?? 'system'] ?? 'border-l-ds-outline-variant'
                   return (
                     <tr key={n.id} className={`hover:bg-ds-surface-container-low/30 transition-colors border-l-2 ${borderCls}`}>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3">
                         <span className="text-xs text-ds-on-surface-variant whitespace-nowrap">{formatRelativeTime(n.timestamp)}</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3">
                         {n.category && (
                           <span className="text-[10px] font-bold text-ds-on-surface-variant uppercase tracking-wide">
                             {CATEGORY_LABEL[n.category] ?? n.category}
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight ${TYPE_BADGE[n.type] ?? TYPE_BADGE.info}`}>
                           <Icon className="w-2.5 h-2.5" />
                           {typeConf.label}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3">
                         <span className="text-sm font-semibold text-ds-on-surface">{n.title}</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3">
                         {n.device_name && (
                           <span className="text-xs font-mono text-ds-tertiary">{n.device_name}</span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3">
                         {n.username ? (
                           <span className="text-xs font-mono text-ds-on-surface-variant">{n.username}</span>
                         ) : (
@@ -264,7 +264,7 @@ export function NotificationsPage() {
 
             {/* Load more */}
             {hasNextPage && (
-              <div className="px-6 py-4 border-t border-ds-outline-variant/10 flex justify-center">
+              <div className="px-5 py-3 border-t border-ds-outline-variant/8 flex justify-center">
                 <button
                   onClick={() => fetchNextPage()}
                   disabled={isFetchingNextPage}

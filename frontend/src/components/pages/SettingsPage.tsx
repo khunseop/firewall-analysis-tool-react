@@ -38,23 +38,23 @@ function GeneralSettings() {
   const generalSettings = settings.filter(s => s.key !== 'risky_ports')
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {generalSettings.map((s) => (
-        <div key={s.key} className="bg-ds-surface-container-low rounded-lg p-4">
-          <p className="text-sm font-bold text-ds-on-surface font-headline">{s.key}</p>
-          {s.description && <p className="text-xs text-ds-on-surface-variant mt-0.5 mb-3">{s.description}</p>}
+        <div key={s.key} className="bg-ds-surface-container-low/50 rounded-lg border border-ds-outline-variant/8 px-4 py-3.5">
+          <p className="text-[12px] font-semibold text-ds-on-surface">{s.key}</p>
+          {s.description && <p className="text-[11px] text-ds-on-surface-variant/70 mt-0.5 mb-3">{s.description}</p>}
           <div className="flex gap-2 mt-2">
             <input
               value={values[s.key] ?? ''}
               onChange={(e) => setValues((prev) => ({ ...prev, [s.key]: e.target.value }))}
-              className="flex-1 max-w-sm h-9 px-3 text-sm bg-ds-surface-container-lowest border border-ds-outline-variant/30 rounded-md focus:outline-none focus:border-ds-tertiary focus:ring-1 focus:ring-ds-tertiary"
+              className="flex-1 max-w-sm h-8 px-3 text-[12px] bg-white border border-ds-outline-variant/30 rounded-lg focus:outline-none focus:border-ds-tertiary"
             />
             <button
               onClick={() => updateMutation.mutate({ key: s.key, value: values[s.key] ?? '' })}
               disabled={updateMutation.isPending}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-ds-on-tertiary btn-primary-gradient rounded-md disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-ds-on-tertiary btn-primary-gradient rounded-lg shadow-sm disabled:opacity-50"
             >
-              <Save className="w-3.5 h-3.5" />
+              <Save className="w-3 h-3" />
               저장
             </button>
           </div>
@@ -109,17 +109,17 @@ function RiskyPortsSettings() {
     <div className="space-y-4">
       <p className="text-sm text-ds-on-surface-variant">위험 포트 목록을 관리합니다. 정책 분석 시 해당 포트를 허용하는 정책이 위험으로 분류됩니다.</p>
 
-      <div className="overflow-x-auto rounded-lg border border-ds-outline-variant/10">
+      <div className="overflow-x-auto rounded-lg border border-ds-outline-variant/8">
         <table className="w-full text-left border-collapse">
-          <thead className="bg-ds-surface-container-low/50">
-            <tr>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-ds-primary w-28">프로토콜</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-ds-primary w-36">포트</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-ds-primary">설명</th>
-              <th className="px-4 py-3 w-12"></th>
+          <thead>
+            <tr className="border-b border-ds-outline-variant/8 bg-ds-surface-container-low/30">
+              <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60 w-28">프로토콜</th>
+              <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60 w-36">포트</th>
+              <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">설명</th>
+              <th className="px-4 py-2.5 w-12"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ds-outline-variant/10">
+          <tbody className="divide-y divide-ds-outline-variant/8">
             {rows.map((row, idx) => (
               <tr key={idx} className="hover:bg-ds-surface-container-low/20">
                 <td className="px-4 py-2">
@@ -163,23 +163,23 @@ function RiskyPortsSettings() {
         </table>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <button
           onClick={addRow}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-ds-tertiary bg-ds-tertiary/10 rounded-md hover:bg-ds-tertiary/15 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-ds-tertiary bg-ds-tertiary/10 rounded-lg border border-ds-tertiary/20 hover:bg-ds-tertiary/15 transition-colors"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           포트 추가
         </button>
         <button
           onClick={() => saveMutation.mutate()}
           disabled={!dirty || saveMutation.isPending}
-          className="flex items-center gap-1.5 px-5 py-2 text-sm font-bold text-ds-on-tertiary btn-primary-gradient rounded-md disabled:opacity-50 transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold text-ds-on-tertiary btn-primary-gradient rounded-lg shadow-sm disabled:opacity-50 transition-all"
         >
-          <Save className="w-4 h-4" />
+          <Save className="w-3.5 h-3.5" />
           저장
         </button>
-        {dirty && <span className="text-xs text-amber-600 font-semibold">저장되지 않은 변경사항이 있습니다</span>}
+        {dirty && <span className="text-[11px] text-amber-600 font-semibold">저장되지 않은 변경사항이 있습니다</span>}
       </div>
     </div>
   )
@@ -237,25 +237,25 @@ function AccountSettings() {
     <div className="space-y-4">
       {ConfirmDialogElement}
       <div className="flex justify-between items-center">
-        <p className="text-sm text-ds-on-surface-variant">시스템 계정을 관리합니다.</p>
+        <p className="text-[12px] text-ds-on-surface-variant">시스템 계정을 관리합니다.</p>
         <button
           onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-ds-on-tertiary btn-primary-gradient rounded-md"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold btn-primary-gradient text-ds-on-tertiary rounded-lg shadow-sm hover:opacity-90 transition-all"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           계정 추가
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-ds-outline-variant/10">
+      <div className="overflow-x-auto rounded-lg border border-ds-outline-variant/8">
         <table className="w-full text-left border-collapse">
-          <thead className="bg-ds-surface-container-low/50">
-            <tr>
-              <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-ds-primary">사용자명</th>
-              <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-ds-primary">권한</th>
-              <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-ds-primary">상태</th>
-              <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-ds-primary">생성일</th>
-              <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-ds-primary">작업</th>
+          <thead>
+            <tr className="border-b border-ds-outline-variant/8 bg-ds-surface-container-low/30">
+              <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">사용자명</th>
+              <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">권한</th>
+              <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">상태</th>
+              <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">생성일</th>
+              <th className="px-5 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">작업</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ds-outline-variant/10">
@@ -404,9 +404,9 @@ function LogSettings() {
   return (
     <div className="space-y-6">
       {ConfirmDialogElement}
-      <div className="bg-ds-surface-container-low rounded-lg p-5">
-        <h3 className="text-sm font-bold text-ds-on-surface mb-1">로그 자동 정리</h3>
-        <p className="text-xs text-ds-on-surface-variant mb-4">지정한 일수보다 오래된 활동 로그를 삭제합니다.</p>
+      <div className="bg-ds-surface-container-low/50 rounded-lg border border-ds-outline-variant/8 px-4 py-4">
+        <p className="text-[12px] font-semibold text-ds-on-surface mb-0.5">로그 자동 정리</p>
+        <p className="text-[11px] text-ds-on-surface-variant/70 mb-4">지정한 일수보다 오래된 활동 로그를 삭제합니다.</p>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <input
@@ -415,16 +415,16 @@ function LogSettings() {
               max={3650}
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
-              className="w-20 h-9 px-3 text-sm bg-ds-surface-container-lowest border border-ds-outline-variant/30 rounded-md focus:outline-none focus:border-ds-tertiary text-center"
+              className="w-20 h-8 px-3 text-[12px] bg-white border border-ds-outline-variant/30 rounded-lg focus:outline-none focus:border-ds-tertiary text-center"
             />
-            <span className="text-sm text-ds-on-surface-variant">일 이상 된 로그 삭제</span>
+            <span className="text-[12px] text-ds-on-surface-variant">일 이상 된 로그 삭제</span>
           </div>
           <button
             onClick={handleCleanup}
             disabled={isDeleting}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold bg-ds-error text-white rounded-md hover:brightness-110 transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold bg-ds-error text-white rounded-lg hover:brightness-110 transition-all disabled:opacity-50"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3.5 h-3.5" />
             {isDeleting ? '삭제 중…' : '지금 정리'}
           </button>
         </div>
@@ -450,21 +450,21 @@ export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('general')
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Page header */}
-      <div>
+      <div className="flex items-center justify-between shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Settings</h1>
       </div>
 
       {/* Settings panel */}
-      <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border overflow-hidden">
+      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden">
         {/* Tab bar */}
-        <div className="flex items-center border-b border-ds-outline-variant/10 px-4 pt-2">
+        <div className="flex items-center border-b border-ds-outline-variant/8 px-4 pt-2">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-semibold font-headline tracking-tight transition-colors duration-200 border-b-2 -mb-px ${
+              className={`px-4 py-2 text-[13px] font-semibold tracking-tight transition-colors duration-200 border-b-2 -mb-px ${
                 activeTab === tab.key
                   ? 'text-ds-tertiary border-ds-tertiary'
                   : 'text-ds-on-surface-variant border-transparent hover:text-ds-on-surface hover:border-ds-outline-variant/30'

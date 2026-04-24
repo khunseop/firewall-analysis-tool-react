@@ -76,23 +76,23 @@ function TabGrid<T>({ columnDefs, rowData, isLoading, onExport }: {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 flex-1 bg-ds-surface-container-low rounded-md px-3 py-1.5 border border-ds-outline-variant/20">
-          <Search className="w-3.5 h-3.5 text-ds-outline shrink-0" />
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 bg-ds-surface-container-low rounded-lg px-2.5 py-1.5 border border-ds-outline-variant/10">
+          <Search className="w-3 h-3 text-ds-on-surface-variant shrink-0" />
           <input
-            placeholder="빠른 검색…"
+            placeholder="검색…"
             value={quickFilter}
             onChange={(e) => setQuickFilter(e.target.value)}
-            className="flex-1 bg-transparent text-sm focus:outline-none text-ds-on-surface placeholder:text-ds-outline/50"
+            className="text-[12px] bg-transparent outline-none text-ds-on-surface placeholder:text-ds-on-surface-variant/40 w-44"
           />
         </div>
-        <span className="text-xs text-ds-on-surface-variant whitespace-nowrap">{rowData.length.toLocaleString()}건</span>
+        <span className="text-[11px] text-ds-on-surface-variant/60 whitespace-nowrap tabular-nums">{rowData.length.toLocaleString()}건</span>
         <button
           onClick={onExport}
           disabled={rowData.length === 0}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-ds-on-surface-variant bg-ds-surface-container-low rounded-md hover:text-ds-on-surface disabled:opacity-40 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-ds-on-surface-variant bg-ds-surface-container-low rounded-lg border border-ds-outline-variant/10 hover:text-ds-on-surface disabled:opacity-40 transition-colors"
         >
-          <Download className="w-3.5 h-3.5" />
+          <Download className="w-3 h-3" />
           Excel
         </button>
       </div>
@@ -254,21 +254,21 @@ export function ObjectsPage() {
   const current = tabContent[activeTab]
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Page header */}
-      <header>
+      <div className="flex items-center justify-between shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Objects</h1>
-      </header>
+      </div>
 
       {/* Tabs + Grid */}
-      <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border overflow-hidden">
+      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden">
         {/* Tab bar */}
-        <div className="flex items-center gap-1 border-b border-ds-outline-variant/10 px-4 pt-2">
+        <div className="flex items-center gap-1 border-b border-ds-outline-variant/8 px-4 pt-2">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-semibold tracking-tight transition-colors duration-150 border-b-2 -mb-px rounded-t ${
+              className={`px-4 py-2 text-[13px] font-semibold tracking-tight transition-colors duration-150 border-b-2 -mb-px ${
                 activeTab === tab.key
                   ? 'text-ds-tertiary border-ds-tertiary'
                   : 'text-ds-on-surface-variant border-transparent hover:text-ds-on-surface hover:border-ds-outline-variant/30'

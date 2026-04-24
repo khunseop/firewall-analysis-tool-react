@@ -171,34 +171,32 @@ function ResultSummary({
   }, [analysisType, results, days])
 
   return (
-    <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border px-6 py-4 flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <div className="p-2 bg-amber-100 rounded-lg">
-          <span className="text-amber-700 text-sm font-bold">!</span>
-        </div>
+    <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm px-5 py-3 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
         <div>
-          <p className="text-sm font-bold text-ds-on-surface">{summary}</p>
+          <p className="text-[13px] font-semibold text-ds-on-surface">{summary}</p>
           {completedAt && (
-            <p className="text-xs text-ds-on-surface-variant mt-0.5">분석 완료: {formatRelativeTime(completedAt)}</p>
+            <p className="text-[11px] text-ds-on-surface-variant/60 mt-0.5">분석 완료: {formatRelativeTime(completedAt)}</p>
           )}
         </div>
       </div>
       <button
         onClick={onExport}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-ds-on-surface ghost-border bg-ds-surface-container-lowest rounded-md hover:bg-ds-surface-container-low transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-ds-on-surface-variant bg-ds-surface-container-low rounded-lg border border-ds-outline-variant/10 hover:text-ds-on-surface transition-colors"
       >
-        <Download className="w-4 h-4" />
-        Excel 내보내기
+        <Download className="w-3 h-3" />
+        Excel
       </button>
     </div>
   )
 }
 
-const STATUS_LABELS: Record<string, { label: string; classes: string }> = {
-  pending:     { label: '대기중', classes: 'bg-blue-100 text-blue-700' },
-  in_progress: { label: '분석중', classes: 'bg-amber-100 text-amber-700' },
-  success:     { label: '완료',   classes: 'bg-green-100 text-green-700' },
-  failure:     { label: '실패',   classes: 'bg-red-100 text-red-700' },
+const STATUS_LABELS: Record<string, { label: string; dot: string; text: string }> = {
+  pending:     { label: '대기중', dot: 'bg-ds-outline',                text: 'text-ds-on-surface-variant' },
+  in_progress: { label: '분석중', dot: 'bg-ds-tertiary animate-pulse', text: 'text-ds-tertiary' },
+  success:     { label: '완료',   dot: 'bg-emerald-500',               text: 'text-emerald-700' },
+  failure:     { label: '실패',   dot: 'bg-ds-error',                  text: 'text-ds-error' },
 }
 
 export function AnalysisPage() {
@@ -279,14 +277,18 @@ export function AnalysisPage() {
   const currentStatus = taskStatus ? STATUS_LABELS[taskStatus.task_status] : null
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Page header */}
-      <div>
+      <div className="flex items-center justify-between shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Analysis</h1>
       </div>
 
       {/* Config panel */}
-      <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border p-6 space-y-5">
+      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden">
+      <div className="px-5 py-3 border-b border-ds-outline-variant/8">
+        <span className="text-[13px] font-semibold text-ds-on-surface">분석 설정</span>
+      </div>
+      <div className="p-5 space-y-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold uppercase tracking-widest text-ds-primary">장비 *</label>
@@ -363,12 +365,13 @@ export function AnalysisPage() {
           </button>
 
           {currentStatus && (
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold uppercase rounded-full ${currentStatus.classes}`}>
-              {isPolling && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse inline-block" />}
+            <span className={`flex items-center gap-1.5 text-[12px] font-semibold ${currentStatus.text}`}>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${currentStatus.dot}`} />
               {currentStatus.label}
             </span>
           )}
         </div>
+      </div>
       </div>
 
       {/* Results */}
@@ -381,10 +384,10 @@ export function AnalysisPage() {
             completedAt={resultCompletedAt}
             onExport={() => exportToExcel(results as Record<string, unknown>[], `분석결과_${analysisType}`).catch((e: Error) => toast.error(e.message))}
           />
-          <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-ds-outline-variant/10">
-              <h2 className="text-sm font-bold text-ds-on-surface font-headline">분석 결과 상세</h2>
-              <span className="text-xs text-ds-on-surface-variant">{results.length.toLocaleString()}건</span>
+          <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-ds-outline-variant/8">
+              <span className="text-[13px] font-semibold text-ds-on-surface">분석 결과 상세</span>
+              <span className="text-[11px] text-ds-on-surface-variant/60 tabular-nums">{results.length.toLocaleString()}건</span>
             </div>
             <AgGridWrapper
               columnDefs={columnDefs}

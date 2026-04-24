@@ -155,72 +155,81 @@ export function SchedulesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {ConfirmDialogElement}
 
       {/* Page header */}
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Schedules</h1>
-        </div>
+      <div className="flex items-center justify-between shrink-0">
+        <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Schedules</h1>
         <button
           onClick={() => { setEditTarget(null); setFormOpen(true) }}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-ds-on-tertiary btn-primary-gradient rounded-lg ambient-shadow-sm hover:opacity-90 transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold btn-primary-gradient text-ds-on-tertiary rounded-lg shadow-sm hover:opacity-90 transition-all"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           스케줄 추가
         </button>
       </div>
 
       {/* Schedule list */}
-      <div className="space-y-3">
+      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-ds-outline-variant/8 flex items-center gap-3">
+          <span className="text-[13px] font-semibold text-ds-on-surface">등록된 스케줄</span>
+          {schedules.length > 0 && (
+            <span className="text-[11px] text-ds-on-surface-variant/50 tabular-nums">{schedules.length}개</span>
+          )}
+        </div>
         {isLoading ? (
-          <div className="py-12 text-center text-sm text-ds-on-surface-variant">로딩 중…</div>
+          <div className="py-16 text-center text-[13px] text-ds-on-surface-variant">로딩 중…</div>
         ) : schedules.length === 0 ? (
-          <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border py-16 text-center">
-            <p className="text-sm text-ds-on-surface-variant">등록된 스케줄이 없습니다.</p>
+          <div className="py-16 text-center text-[13px] text-ds-on-surface-variant">
+            등록된 스케줄이 없습니다.
           </div>
         ) : (
-          schedules.map((s) => (
-            <div key={s.id} className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border p-5 flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-ds-on-surface font-headline">{s.name}</span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight ${s.enabled ? 'bg-green-100 text-green-700' : 'bg-ds-surface-container text-ds-on-surface-variant'}`}>
-                    {s.enabled ? '활성' : '비활성'}
-                  </span>
-                </div>
-                <p className="text-xs text-ds-on-surface-variant">
-                  {formatDays(s.days_of_week)} · {s.time} · 장비 {s.device_ids.length}개
-                </p>
-                {s.last_run_at && (
-                  <p className="text-xs text-ds-on-surface-variant">
-                    마지막 실행: {formatDate(s.last_run_at)}
-                    {s.last_run_status && (
-                      <span className={cn('ml-1 font-medium', s.last_run_status === 'success' ? 'text-green-600' : 'text-ds-error')}>
-                        ({s.last_run_status})
-                      </span>
-                    )}
+          <div className="divide-y divide-ds-outline-variant/8">
+            {schedules.map((s) => (
+              <div key={s.id} className="px-5 py-4 flex items-center justify-between hover:bg-ds-surface-container-low/20 transition-colors">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-semibold text-ds-on-surface">{s.name}</span>
+                    <span className={`flex items-center gap-1 text-[11px] font-semibold ${s.enabled ? 'text-emerald-700' : 'text-ds-on-surface-variant'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${s.enabled ? 'bg-emerald-500' : 'bg-ds-outline'}`} />
+                      {s.enabled ? '활성' : '비활성'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-ds-on-surface-variant">
+                    {formatDays(s.days_of_week)} · {s.time} · 장비 {s.device_ids.length}개
                   </p>
-                )}
-                {s.description && <p className="text-xs text-ds-on-surface-variant">{s.description}</p>}
+                  {s.last_run_at && (
+                    <p className="text-[11px] text-ds-on-surface-variant/60">
+                      마지막 실행: {formatDate(s.last_run_at)}
+                      {s.last_run_status && (
+                        <span className={cn('ml-1 font-semibold', s.last_run_status === 'success' ? 'text-emerald-600' : 'text-ds-error')}>
+                          ({s.last_run_status === 'success' ? '성공' : '실패'})
+                        </span>
+                      )}
+                    </p>
+                  )}
+                  {s.description && <p className="text-[11px] text-ds-on-surface-variant/60">{s.description}</p>}
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => { setEditTarget(s); setFormOpen(true) }}
+                    className="p-1.5 hover:bg-ds-surface-container-high rounded-lg text-ds-on-surface-variant hover:text-ds-primary transition-colors"
+                    title="수정"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(s)}
+                    className="p-1.5 hover:bg-red-50 rounded-lg text-ds-on-surface-variant hover:text-ds-error transition-colors"
+                    title="삭제"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => { setEditTarget(s); setFormOpen(true) }}
-                  className="p-2 text-ds-on-surface-variant hover:text-ds-on-surface hover:bg-ds-surface-container-low rounded-lg transition-colors"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(s)}
-                  className="p-2 text-ds-on-surface-variant hover:text-ds-error hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
 
