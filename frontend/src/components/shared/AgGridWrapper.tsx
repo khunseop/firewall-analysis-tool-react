@@ -31,6 +31,9 @@ interface AgGridWrapperProps<T> {
   onRowClicked?: (event: RowClickedEvent<T>) => void
   /** 컬럼을 컨테이너 너비에 맞게 분배 (기본값: false = 내용 기반 자동 너비) */
   fitColumns?: boolean
+  rowSelection?: 'single' | 'multiple'
+  onSelectionChanged?: (rows: T[]) => void
+  context?: Record<string, unknown>
 }
 
 function AgGridWrapperInner<T>(
@@ -46,6 +49,9 @@ function AgGridWrapperInner<T>(
     defaultColDefOverride,
     onRowClicked,
     fitColumns = false,
+    rowSelection,
+    onSelectionChanged,
+    context,
   }: AgGridWrapperProps<T>,
   ref: React.ForwardedRef<AgGridWrapperHandle>
 ) {
@@ -101,6 +107,9 @@ function AgGridWrapperInner<T>(
         getRowStyle={getRowStyle}
         quickFilterText={quickFilterText}
         onRowClicked={onRowClicked}
+        rowSelection={rowSelection}
+        onSelectionChanged={onSelectionChanged ? (e) => onSelectionChanged(e.api.getSelectedRows()) : undefined}
+        context={context}
         defaultColDef={{
           resizable: true,
           filter: true,
