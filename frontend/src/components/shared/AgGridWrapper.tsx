@@ -22,6 +22,7 @@ interface AgGridWrapperProps<T> {
   quickFilterText?: string
   height?: string | number
   noRowsText?: string
+  defaultColDefOverride?: Record<string, unknown>
 }
 
 function AgGridWrapperInner<T>(
@@ -34,6 +35,7 @@ function AgGridWrapperInner<T>(
     quickFilterText,
     height = 'calc(100vh - 200px)',
     noRowsText = '데이터가 없습니다.',
+    defaultColDefOverride,
   }: AgGridWrapperProps<T>,
   ref: React.ForwardedRef<AgGridWrapperHandle>
 ) {
@@ -72,6 +74,7 @@ function AgGridWrapperInner<T>(
           filter: true,
           sortable: true,
           filterParams: { buttons: ['reset', 'apply'] },
+          ...defaultColDefOverride,
         }}
         enableCellTextSelection
         overlayNoRowsTemplate={`

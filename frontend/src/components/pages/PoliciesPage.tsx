@@ -201,33 +201,8 @@ export function PoliciesPage() {
 
   const columnDefs: ColDef<Policy>[] = [
     {
-      field: '_change' as keyof Policy,
-      headerName: '',
-      width: 56,
-      sortable: false,
-      filter: false,
-      pinned: 'left',
-      cellRenderer: (p: { data: Policy }) => {
-        const key = `${p.data.device_id}_${p.data.rule_name}`
-        const log = changeLogMap.get(key)
-        if (!log) return null
-        const meta = CHANGE_META[log.action] ?? { label: log.action, cls: 'bg-gray-100 text-gray-500' }
-        return (
-          <button
-            title={`${meta.label} — 클릭하여 이력 보기`}
-            onClick={() => setHistoryModal({ deviceId: p.data.device_id, ruleName: p.data.rule_name })}
-            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold transition-opacity hover:opacity-70 ${meta.cls}`}
-          >
-            <History className="w-2.5 h-2.5" />
-            {meta.label}
-          </button>
-        )
-      },
-    },
-    {
       headerName: '장비명',
-      filter: 'agTextColumnFilter',
-      width: 130,
+      width: 120,
       pinned: 'left',
       valueGetter: (p) => deviceNameMap.get(p.data?.device_id ?? -1) ?? String(p.data?.device_id ?? '-'),
       cellRenderer: (p: { value: string }) => (
@@ -235,53 +210,89 @@ export function PoliciesPage() {
       ),
     },
     {
-      field: 'seq', headerName: '#', filter: 'agNumberColumnFilter', width: 55,
+      field: 'seq', headerName: '#', width: 52,
       cellRenderer: (p: { value: number }) => (
         <span className="font-mono text-xs text-ds-on-surface-variant">{p.value}</span>
       ),
     },
     {
-      field: 'rule_name', headerName: '정책명', filter: 'agTextColumnFilter', width: 200,
-      cellRenderer: (p: { value: string }) => (
-        <span className="font-mono text-xs font-semibold text-ds-on-surface">{p.value ?? '-'}</span>
-      ),
+      field: 'rule_name', headerName: '정책명', width: 200,
+      cellRenderer: (p: { value: string; data: Policy }) => {
+        const key = `${p.data.device_id}_${p.data.rule_name}`
+        const log = changeLogMap.get(key)
+        const meta = log ? (CHANGE_META[log.action] ?? { label: log.action, cls: 'bg-gray-100 text-gray-500' }) : null
+        return (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-mono text-xs font-semibold text-ds-on-surface truncate">{p.value ?? '-'}</span>
+            {meta && (
+              <button
+                title={`${meta.label} — 클릭하여 이력 보기`}
+                onClick={() => setHistoryModal({ deviceId: p.data.device_id, ruleName: p.data.rule_name })}
+                className={`shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold transition-opacity hover:opacity-70 ${meta.cls}`}
+              >
+                <History className="w-2.5 h-2.5" />
+                {meta.label}
+              </button>
+            )}
+          </div>
+        )
+      },
     },
     {
-      field: 'action', headerName: '액션', filter: 'agTextColumnFilter', width: 75,
+      field: 'action', headerName: '액션', width: 72,
       cellRenderer: (p: { value: string }) => {
         const cls = ACTION_BADGE[p.value?.toLowerCase()] ?? 'bg-ds-surface-container text-ds-on-surface-variant'
         return <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${cls}`}>{p.value}</span>
       },
     },
     {
-      field: 'enable', headerName: '활성', width: 65,
+      field: 'enable', headerName: '활성', width: 62,
       cellRenderer: (p: { value: boolean }) => (
         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${p.value ? 'bg-green-100 text-green-700' : 'bg-ds-surface-container text-ds-on-surface-variant'}`}>
           {p.value ? '활성' : '비활성'}
         </span>
       ),
     },
-    { field: 'source',      headerName: '출발지', filter: 'agTextColumnFilter', flex: 1, minWidth: 150, autoHeight: true, cellRenderer: makeCellRenderer() },
-    { field: 'destination', headerName: '목적지', filter: 'agTextColumnFilter', flex: 1, minWidth: 150, autoHeight: true, cellRenderer: makeCellRenderer() },
-    { field: 'service',     headerName: '서비스', filter: 'agTextColumnFilter', width: 150, autoHeight: true, cellRenderer: makeCellRenderer() },
-    { field: 'user',        headerName: '사용자',      filter: 'agTextColumnFilter', width: 110 },
-    { field: 'application', headerName: '애플리케이션', filter: 'agTextColumnFilter', width: 130, hide: true },
+    { field: 'source',      headerName: '출발지', flex: 1, minWidth: 140, autoHeight: true, cellRenderer: makeCellRenderer() },
+    { field: 'destination', headerName: '목적지', flex: 1, minWidth: 140, autoHeight: true, cellRenderer: makeCellRenderer() },
+    { field: 'service',     headerName: '서비스', minWidth: 120, autoHeight: true, cellRenderer: makeCellRenderer() },
     {
-      field: 'security_profile', headerName: '보안 프로파일', filter: 'agTextColumnFilter', width: 140,
+      field: 'user', headerName: '사용자', minWidth: 100, autoHeight: true,
+      cellRenderer: (p: { value: string | null }) => {
+        if (!p.value) return <span className="text-[11px] text-ds-on-surface-variant">-</span>
+        const users = p.value.split(',').map((u) => u.trim()).filter(Boolean)
+        if (users.length === 1) return <span className="font-mono text-xs text-ds-on-surface">{users[0]}</span>
+        return (
+          <div className="flex flex-col gap-0.5 py-1">
+            {users.map((u, i) => (
+              <span key={i} className="font-mono text-[11px] text-ds-on-surface leading-tight">{u}</span>
+            ))}
+          </div>
+        )
+      },
+    },
+    { field: 'application', headerName: '애플리케이션', width: 130, hide: true },
+    {
+      field: 'security_profile', headerName: '보안 프로파일', width: 130,
       cellRenderer: (p: { value: string | null }) =>
         p.value ? <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-700">{p.value}</span> : <span className="text-[11px] text-ds-on-surface-variant">-</span>,
     },
     {
-      field: 'category', headerName: '카테고리', filter: 'agTextColumnFilter', width: 110,
+      field: 'category', headerName: '카테고리', width: 100,
       cellRenderer: (p: { value: string | null }) =>
         p.value ? <span className="text-[11px] text-ds-on-surface-variant">{p.value}</span> : <span className="text-[11px] text-ds-on-surface-variant">-</span>,
     },
-    { field: 'description', headerName: '설명', filter: 'agTextColumnFilter', width: 140 },
     {
-      field: 'last_hit_date', headerName: '마지막 사용일', filter: 'agTextColumnFilter', width: 130,
+      field: 'description', headerName: '설명', flex: 1, minWidth: 120,
+      cellRenderer: (p: { value: string | null }) => (
+        <span className="text-xs text-ds-on-surface-variant">{p.value ?? '-'}</span>
+      ),
+    },
+    {
+      field: 'last_hit_date', headerName: '마지막 사용일', minWidth: 120,
       cellRenderer: (p: { value: string | null }) => <LastHitCell value={p.value} />,
     },
-    { field: 'vsys', headerName: 'VSYS', filter: 'agTextColumnFilter', width: 75, hide: true },
+    { field: 'vsys', headerName: 'VSYS', width: 72, hide: true },
   ]
 
   const hasConditions = conditions.length > 0 && conditions.some(c => c.value.trim())
@@ -376,6 +387,7 @@ export function PoliciesPage() {
           getRowId={(p) => String(p.data.id)}
           height="100%"
           noRowsText="장비를 선택하고 검색 버튼을 클릭하세요."
+          defaultColDefOverride={{ filter: false }}
         />
       </div>
 
