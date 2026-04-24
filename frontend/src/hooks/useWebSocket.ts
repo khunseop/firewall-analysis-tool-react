@@ -13,6 +13,10 @@ export function useSyncStatusWebSocket(onMessage: (msg: SyncStatusMessage) => vo
   const isMounted = useRef(true)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const onMessageRef = useRef(onMessage)
+
+  // 항상 최신 콜백을 ref에 유지 (stale closure 방지)
+  onMessageRef.current = onMessage
 
   useEffect(() => {
     isMounted.current = true
@@ -30,7 +34,7 @@ export function useSyncStatusWebSocket(onMessage: (msg: SyncStatusMessage) => vo
         try {
           const data = JSON.parse(e.data) as SyncStatusMessage
           if (data.type === 'device_sync_status') {
-            onMessage(data)
+            onMessageRef.current(data)
           }
         } catch {}
       }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { formatRelativeTime } from '@/lib/utils'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -14,6 +14,7 @@ import {
   testConnection, syncAll, downloadDeviceTemplate, bulkImportDevices,
   type Device, type DeviceCreate, type DeviceUpdate,
 } from '@/api/devices'
+import { useSyncStatusWebSocket, type SyncStatusMessage } from '@/hooks/useWebSocket'
 import { formatDate } from '@/lib/utils'
 
 const VENDOR_OPTIONS = [
@@ -182,6 +183,22 @@ export function DevicesPage() {
     onSuccess: () => toast.success('동기화가 시작되었습니다.'),
     onError: (e: Error) => toast.error(e.message),
   })
+
+  const handleSyncMessage = useCallback((msg: SyncStatusMessage) => {
+    queryClient.setQueryData<Device[]>(['devices'], (old) => {
+      if (!old) return old
+      return old.map((d) =>
+        d.id === msg.device_id
+          ? { ...d, last_sync_status: msg.status, last_sync_step: msg.step }
+          : d
+      )
+    })
+    if (msg.status === 'success' || msg.status === 'failure') {
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+    }
+  }, [queryClient])
+
+  useSyncStatusWebSocket(handleSyncMessage)
   const bulkImportMutation = useMutation({
     mutationFn: (file: File) => bulkImportDevices(file),
     onSuccess: (result) => {
