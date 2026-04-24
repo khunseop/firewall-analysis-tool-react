@@ -54,7 +54,9 @@ class DeviceStats(BaseModel):
     active_policies: int = 0
     disabled_policies: int = 0
     network_objects: int = 0
+    network_groups: int = 0
     services: int = 0
+    service_groups: int = 0
     sync_status: Optional[str] = None
     sync_step: Optional[str] = None
     sync_time: Optional[datetime] = None

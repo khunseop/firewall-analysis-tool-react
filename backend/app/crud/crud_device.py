@@ -270,8 +270,10 @@ async def get_dashboard_stats(db: AsyncSession) -> DashboardStatsResponse:
             policies=policy_data['total'],
             active_policies=policy_data['active'],
             disabled_policies=policy_data['disabled'],
-            network_objects=net_data['objects'] + net_data['groups'],
-            services=svc_data['services'] + svc_data['groups'],
+            network_objects=net_data['objects'],
+            network_groups=net_data['groups'],
+            services=svc_data['services'],
+            service_groups=svc_data['groups'],
             sync_status=device.last_sync_status,
             sync_step=device.last_sync_step,
             sync_time=device.last_sync_at

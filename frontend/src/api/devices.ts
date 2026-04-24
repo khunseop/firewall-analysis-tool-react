@@ -59,7 +59,9 @@ export interface DeviceStats {
   active_policies: number
   disabled_policies: number
   network_objects: number
+  network_groups: number
   services: number
+  service_groups: number
 }
 
 export interface DashboardStats {

@@ -20,17 +20,18 @@ const VENDOR_LABELS: Record<string, string> = {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; text: string }> = {
-  success:     { label: '완료',   dot: 'bg-emerald-500',             text: 'text-emerald-700' },
+  success:     { label: '완료',   dot: 'bg-emerald-500',              text: 'text-emerald-700' },
   in_progress: { label: '진행중', dot: 'bg-ds-tertiary animate-pulse', text: 'text-ds-tertiary' },
-  pending:     { label: '대기',   dot: 'bg-ds-outline',               text: 'text-ds-on-surface-variant' },
-  failure:     { label: '실패',   dot: 'bg-ds-error',                 text: 'text-ds-error' },
-  error:       { label: '오류',   dot: 'bg-ds-error',                 text: 'text-ds-error' },
+  pending:     { label: '대기',   dot: 'bg-ds-outline',                text: 'text-ds-on-surface-variant' },
+  failure:     { label: '실패',   dot: 'bg-ds-error',                  text: 'text-ds-error' },
+  error:       { label: '오류',   dot: 'bg-ds-error',                  text: 'text-ds-error' },
 }
 
 interface DeviceRow {
   id: number; name: string; vendor: string; ip_address?: string
   policies: number; active_policies: number; disabled_policies: number
-  network_objects: number; services: number
+  network_objects: number; network_groups: number
+  services: number; service_groups: number
   sync_status: string | null; sync_step: string | null; sync_time: string | null
 }
 
@@ -41,28 +42,18 @@ function transformDeviceStats(d: DeviceStats): DeviceRow {
     active_policies: d.active_policies ?? 0,
     disabled_policies: d.disabled_policies ?? 0,
     network_objects: d.network_objects ?? 0,
+    network_groups: d.network_groups ?? 0,
     services: d.services ?? 0,
+    service_groups: d.service_groups ?? 0,
     sync_status: d.sync_status,
     sync_step: d.sync_step,
     sync_time: d.sync_time,
   }
 }
 
-function RateBar({ value, total }: { value: number; total: number }) {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0
-  return (
-    <div className="flex items-center gap-2 w-full">
-      <div className="flex-1 h-1 bg-ds-surface-container-high rounded-full overflow-hidden">
-        <div className="h-full bg-ds-tertiary rounded-full transition-all" style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-[10px] font-semibold tabular-nums text-ds-on-surface-variant w-7 text-right">{pct}%</span>
-    </div>
-  )
-}
-
 const COLUMN_DEFS: ColDef<DeviceRow>[] = [
   {
-    field: 'sync_status', headerName: '상태', width: 88, pinned: 'left',
+    field: 'sync_status', headerName: '상태',
     cellRenderer: (p: { value: string | null; data: DeviceRow }) => {
       const conf = STATUS_CONFIG[p.value ?? '']
       if (!conf) return <span className="text-ds-on-surface-variant/40 text-xs">—</span>
@@ -75,7 +66,7 @@ const COLUMN_DEFS: ColDef<DeviceRow>[] = [
     },
   },
   {
-    field: 'name', headerName: '장비명', flex: 1, minWidth: 150, pinned: 'left',
+    field: 'name', headerName: '장비명', flex: 1, minWidth: 140,
     cellRenderer: (p: { data: DeviceRow }) => (
       <div className="flex flex-col justify-center leading-tight">
         <span className="text-[12px] font-semibold text-ds-on-surface">{p.data.name}</span>
@@ -86,7 +77,7 @@ const COLUMN_DEFS: ColDef<DeviceRow>[] = [
     ),
   },
   {
-    field: 'vendor', headerName: '벤더', width: 90,
+    field: 'vendor', headerName: '벤더',
     cellRenderer: (p: { value: string }) => {
       const cls = VENDOR_BADGE[p.value?.toLowerCase()] ?? 'bg-gray-50 text-gray-500 border border-gray-100'
       return (
@@ -97,37 +88,35 @@ const COLUMN_DEFS: ColDef<DeviceRow>[] = [
     },
   },
   {
-    headerName: '정책 / 활성률', width: 180,
-    cellRenderer: (p: { data: DeviceRow }) => (
-      <div className="flex flex-col justify-center gap-1 w-full py-1">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-[12px] font-semibold tabular-nums text-ds-on-surface">{formatNumber(p.data.policies)}</span>
-          <span className="text-[10px] text-ds-on-surface-variant">({formatNumber(p.data.active_policies)} 활성)</span>
-        </div>
-        <RateBar value={p.data.active_policies} total={p.data.policies} />
-      </div>
-    ),
+    field: 'policies', headerName: '전체 정책',
+    valueFormatter: (p) => formatNumber(p.value),
   },
   {
-    field: 'network_objects', headerName: 'Net Objects', width: 110,
-    cellRenderer: (p: { value: number }) => (
-      <span className="text-[12px] tabular-nums text-ds-on-surface">{formatNumber(p.value)}</span>
-    ),
+    field: 'active_policies', headerName: '활성 정책',
+    valueFormatter: (p) => formatNumber(p.value),
   },
   {
-    field: 'services', headerName: 'Services', width: 95,
-    cellRenderer: (p: { value: number }) => (
-      <span className="text-[12px] tabular-nums text-ds-on-surface">{formatNumber(p.value)}</span>
-    ),
+    field: 'disabled_policies', headerName: '비활성 정책',
+    valueFormatter: (p) => formatNumber(p.value),
   },
   {
-    headerName: '사용률', width: 80,
-    cellRenderer: () => (
-      <span className="text-[11px] text-ds-on-surface-variant/40">—</span>
-    ),
+    field: 'network_objects', headerName: '네트워크 객체',
+    valueFormatter: (p) => formatNumber(p.value),
   },
   {
-    field: 'sync_time', headerName: '마지막 동기화', width: 120,
+    field: 'network_groups', headerName: '네트워크 그룹',
+    valueFormatter: (p) => formatNumber(p.value),
+  },
+  {
+    field: 'services', headerName: '서비스',
+    valueFormatter: (p) => formatNumber(p.value),
+  },
+  {
+    field: 'service_groups', headerName: '서비스 그룹',
+    valueFormatter: (p) => formatNumber(p.value),
+  },
+  {
+    field: 'sync_time', headerName: '마지막 동기화',
     valueFormatter: (p) => formatRelativeTime(p.value),
   },
 ]
@@ -183,7 +172,7 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6" style={{ height: 'calc(100vh - 3.25rem - 4rem)' }}>
-      {/* Header */}
+      {/* 헤더 */}
       <div className="flex items-center justify-between shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Dashboard</h1>
         <button
@@ -195,7 +184,7 @@ export function DashboardPage() {
         </button>
       </div>
 
-      {/* Error banner */}
+      {/* 오류 배너 */}
       {errorDevices.length > 0 && (
         <div className="shrink-0 flex items-center justify-between bg-ds-error/4 border border-ds-error/15 rounded-xl px-5 py-3">
           <div className="flex items-center gap-3">
@@ -218,11 +207,10 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* KPI Strip */}
+      {/* KPI */}
       <div className="shrink-0 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        {/* Devices */}
         <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">Devices</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">장비</p>
           <p className="text-2xl font-bold tabular-nums text-ds-on-surface mt-1.5">
             {isLoading ? '…' : formatNumber(totalDevices)}
           </p>
@@ -232,12 +220,11 @@ export function DashboardPage() {
             </div>
             <span className="text-[10px] font-semibold tabular-nums text-ds-on-surface-variant">{syncPct}%</span>
           </div>
-          <p className="text-[10px] text-ds-on-surface-variant/60 mt-1">{successDevices} synced</p>
+          <p className="text-[10px] text-ds-on-surface-variant/60 mt-1">{successDevices}대 동기화 완료</p>
         </div>
 
-        {/* Policies */}
         <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">Policies</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">정책</p>
           <p className="text-2xl font-bold tabular-nums text-ds-on-surface mt-1.5">
             {isLoading ? '…' : formatNumber(totalPolicies)}
           </p>
@@ -247,15 +234,14 @@ export function DashboardPage() {
             </div>
             <span className="text-[10px] font-semibold tabular-nums text-ds-on-surface-variant">{activePct}%</span>
           </div>
-          <p className="text-[10px] text-ds-on-surface-variant/60 mt-1">{formatNumber(activePolicies)} active</p>
+          <p className="text-[10px] text-ds-on-surface-variant/60 mt-1">{formatNumber(activePolicies)}개 활성</p>
         </div>
 
-        {/* 4 object stats */}
         {[
-          { label: 'Net Objects',  value: stats?.total_network_objects ?? 0 },
-          { label: 'Net Groups',   value: stats?.total_network_groups ?? 0 },
-          { label: 'Services',     value: stats?.total_services ?? 0 },
-          { label: 'Svc Groups',   value: stats?.total_service_groups ?? 0 },
+          { label: '네트워크 객체', value: stats?.total_network_objects ?? 0 },
+          { label: '네트워크 그룹', value: stats?.total_network_groups ?? 0 },
+          { label: '서비스',       value: stats?.total_services ?? 0 },
+          { label: '서비스 그룹',  value: stats?.total_service_groups ?? 0 },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">{s.label}</p>
@@ -266,15 +252,14 @@ export function DashboardPage() {
         ))}
       </div>
 
-      {/* Device table — fills remaining viewport */}
+      {/* 장비 현황 테이블 */}
       <div className="flex-1 min-h-0 bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm flex flex-col overflow-hidden">
-        {/* Table header */}
         <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-ds-outline-variant/8">
           <div className="flex items-center gap-3">
             <span className="text-[13px] font-semibold text-ds-on-surface">장비 현황</span>
-            <span className="text-[11px] text-ds-on-surface-variant/50 tabular-nums">
-              {rowData.length > 0 ? `${rowData.length}대` : ''}
-            </span>
+            {rowData.length > 0 && (
+              <span className="text-[11px] text-ds-on-surface-variant/50 tabular-nums">{rowData.length}대</span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 bg-ds-surface-container-low rounded-lg px-2.5 py-1.5 border border-ds-outline-variant/10">
@@ -293,12 +278,11 @@ export function DashboardPage() {
             </div>
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live
+              실시간
             </div>
           </div>
         </div>
 
-        {/* Grid — flex-1 fills remaining space */}
         <div className="flex-1 min-h-0">
           <AgGridWrapper<DeviceRow>
             ref={gridRef}
@@ -307,6 +291,7 @@ export function DashboardPage() {
             getRowId={(p) => String(p.data.id)}
             height="100%"
             noRowsText="등록된 장비가 없습니다."
+            defaultColDefOverride={{ filter: false, resizable: true, sortable: true }}
           />
         </div>
       </div>
