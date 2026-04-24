@@ -92,14 +92,6 @@ export function buildRequestFromConditions(
     }
   }
 
-  // 모든 필터가 비어있으면 limit 적용
-  const hasFilter = Object.entries(payload).some(([k, v]) => {
-    if (k === 'device_ids') return false
-    if (Array.isArray(v)) return (v as unknown[]).length > 0
-    return v !== null && v !== undefined
-  })
-  if (!hasFilter && deviceIds.length > 0) payload.limit = 500
-
   return payload
 }
 
