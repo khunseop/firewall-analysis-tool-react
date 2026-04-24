@@ -76,31 +76,41 @@ async def search_policies(db: AsyncSession, req: schemas.PolicySearchRequest) ->
         Policy.device_id.in_(req.device_ids),
     )
 
-    # Text filters (ILIKE contains)
-    def _ilike(col, val: str):
-        return col.ilike(f"%{val.strip()}%")
+    # Text filters (ILIKE contains, with optional negation)
+    from sqlalchemy import or_, and_
+
+    def _text_filter(col, val: str, negate: bool = False):
+        cond = col.ilike(f"%{val.strip()}%")
+        return ~cond if negate else cond
 
     if req.vsys:
-        stmt = stmt.where(_ilike(Policy.vsys, req.vsys))
+        stmt = stmt.where(_text_filter(Policy.vsys, req.vsys, req.vsys_negate))
     if req.rule_name:
-        from sqlalchemy import or_
         names = [n.strip() for n in req.rule_name.split(',') if n.strip()]
         if names:
-            stmt = stmt.where(or_(*[Policy.rule_name.ilike(f'%{n}%') for n in names]))
+            if req.rule_name_negate:
+                # NOT (A OR B) = NOT A AND NOT B
+                stmt = stmt.where(and_(*[~Policy.rule_name.ilike(f'%{n}%') for n in names]))
+            else:
+                stmt = stmt.where(or_(*[Policy.rule_name.ilike(f'%{n}%') for n in names]))
     if req.user:
-        stmt = stmt.where(_ilike(Policy.user, req.user))
+        stmt = stmt.where(_text_filter(Policy.user, req.user, req.user_negate))
     if req.application:
-        stmt = stmt.where(_ilike(Policy.application, req.application))
+        stmt = stmt.where(_text_filter(Policy.application, req.application, req.application_negate))
     if req.security_profile:
-        stmt = stmt.where(_ilike(Policy.security_profile, req.security_profile))
+        stmt = stmt.where(Policy.security_profile.ilike(f"%{req.security_profile.strip()}%"))
     if req.category:
-        stmt = stmt.where(_ilike(Policy.category, req.category))
+        stmt = stmt.where(Policy.category.ilike(f"%{req.category.strip()}%"))
     if req.description:
-        stmt = stmt.where(_ilike(Policy.description, req.description))
+        stmt = stmt.where(_text_filter(Policy.description, req.description, req.description_negate))
 
-    # Exact-ish filters
+    # Exact-ish filters (with optional negation)
     if req.action:
-        stmt = stmt.where(func.lower(Policy.action) == req.action.strip().lower())
+        action_val = req.action.strip().lower()
+        if req.action_negate:
+            stmt = stmt.where(func.lower(Policy.action) != action_val)
+        else:
+            stmt = stmt.where(func.lower(Policy.action) == action_val)
     if req.enable is not None:
         stmt = stmt.where(Policy.enable == req.enable)
 
@@ -162,19 +172,17 @@ async def search_policies(db: AsyncSession, req: schemas.PolicySearchRequest) ->
                 dst_policy_ids.update(result.scalars().all())
         list_of_policy_id_sets.append(dst_policy_ids)
 
-    # 서비스 필터 (Service/Port Index 활용)
+    # 서비스 필터 (Service/Port Index 활용 + 이름 폴백)
     if req.services:
-        from sqlalchemy import and_, or_
-
         svc_policy_ids = set()
         or_conditions = []
+        name_fallback_tokens = []  # 포트 파싱 실패 → 이름 검색으로 폴백
 
         for token in req.services:
             token = token.strip()
             if not token:
                 continue
 
-            # 'tcp/80'과 같은 프로토콜 명시 형식 지원
             proto = None
             ports_str = token
             if '/' in token:
@@ -182,27 +190,24 @@ async def search_policies(db: AsyncSession, req: schemas.PolicySearchRequest) ->
                 proto = parts[0].strip().lower()
                 ports_str = parts[1].strip()
 
-            # 포트를 숫자 범위(start, end)로 변환 (단일 포트 또는 범위 검색 지원)
             pstart, pend = parse_port_numeric(ports_str)
 
             if pstart is not None and pend is not None:
-                # 포트 범위 중첩(Overlapping) 조건
                 port_condition = and_(
                     models.PolicyServiceMember.port_start <= pend,
                     models.PolicyServiceMember.port_end >= pstart
                 )
-
-                # 프로토콜 필터링 로직
                 if proto and proto != 'any':
-                    # 특정 프로토콜(tcp, udp 등) 명시 시 해당 프로토콜만 검색
                     final_condition = and_(port_condition, func.lower(models.PolicyServiceMember.protocol) == proto)
                 else:
-                    # 프로토콜 미지정 시 'any'를 포함한 기본 전송 프로토콜 검색
                     final_condition = and_(
                         port_condition,
                         func.lower(models.PolicyServiceMember.protocol).in_(['tcp', 'udp', 'any'])
                     )
                 or_conditions.append(final_condition)
+            else:
+                # 포트로 파싱 불가 → 서비스 객체명 ILIKE로 폴백
+                name_fallback_tokens.append(token)
 
         if or_conditions:
             query = select(models.PolicyServiceMember.policy_id).where(
@@ -212,7 +217,17 @@ async def search_policies(db: AsyncSession, req: schemas.PolicySearchRequest) ->
             result = await db.execute(query)
             svc_policy_ids.update(result.scalars().all())
 
-        list_of_policy_id_sets.append(svc_policy_ids)
+        if name_fallback_tokens:
+            name_query = select(models.PolicyServiceMember.policy_id).where(
+                models.PolicyServiceMember.device_id.in_(req.device_ids),
+                or_(*[models.PolicyServiceMember.token.ilike(f'%{n}%') for n in name_fallback_tokens])
+            )
+            result = await db.execute(name_query)
+            svc_policy_ids.update(result.scalars().all())
+
+        # 실제 검색이 수행된 경우에만 교집합에 추가 (빈 set이 모든 결과를 지우는 버그 방지)
+        if or_conditions or name_fallback_tokens:
+            list_of_policy_id_sets.append(svc_policy_ids)
 
     # 출발지 객체명 필터 (PolicyAddressMember.token ILIKE)
     if req.src_names:
@@ -263,12 +278,121 @@ async def search_policies(db: AsyncSession, req: schemas.PolicySearchRequest) ->
         final_policy_ids = set.intersection(*list_of_policy_id_sets)
 
         if not final_policy_ids:
-            # 인덱스 필터를 적용했을 때 일치하는 결과가 전혀 없는 경우 즉시 빈 리스트 반환
             return []
-        
-        # 주 쿼리에 정책 ID 필터 추가
+
         stmt = stmt.where(Policy.id.in_(final_policy_ids))
 
+    # ─── 제외 필터 (NOT IN) ───────────────────────────────────────────────────
+
+    async def _collect_addr_ids(direction: str, ip_list: list) -> set:
+        ids: set = set()
+        for ip_str in ip_list:
+            _, start, end = parse_ipv4_numeric(ip_str)
+            if start is not None and end is not None:
+                q = select(models.PolicyAddressMember.policy_id).where(
+                    models.PolicyAddressMember.device_id.in_(req.device_ids),
+                    models.PolicyAddressMember.direction == direction,
+                    models.PolicyAddressMember.ip_start <= end,
+                    models.PolicyAddressMember.ip_end >= start
+                )
+                r = await db.execute(q)
+                ids.update(r.scalars().all())
+        return ids
+
+    async def _collect_svc_ids(token_list: list) -> set:
+        ids: set = set()
+        svc_or: list = []
+        name_tokens: list = []
+        for token in token_list:
+            token = token.strip()
+            if not token:
+                continue
+            proto = None
+            ports_str = token
+            if '/' in token:
+                p, ports_str = token.split('/', 1)
+                proto = p.strip().lower()
+                ports_str = ports_str.strip()
+            pstart, pend = parse_port_numeric(ports_str)
+            if pstart is not None and pend is not None:
+                pc = and_(
+                    models.PolicyServiceMember.port_start <= pend,
+                    models.PolicyServiceMember.port_end >= pstart
+                )
+                if proto and proto != 'any':
+                    svc_or.append(and_(pc, func.lower(models.PolicyServiceMember.protocol) == proto))
+                else:
+                    svc_or.append(and_(pc, func.lower(models.PolicyServiceMember.protocol).in_(['tcp', 'udp', 'any'])))
+            else:
+                name_tokens.append(token)
+        if svc_or:
+            q = select(models.PolicyServiceMember.policy_id).where(
+                models.PolicyServiceMember.device_id.in_(req.device_ids),
+                or_(*svc_or)
+            )
+            r = await db.execute(q)
+            ids.update(r.scalars().all())
+        if name_tokens:
+            q = select(models.PolicyServiceMember.policy_id).where(
+                models.PolicyServiceMember.device_id.in_(req.device_ids),
+                or_(*[models.PolicyServiceMember.token.ilike(f'%{n}%') for n in name_tokens])
+            )
+            r = await db.execute(q)
+            ids.update(r.scalars().all())
+        return ids
+
+    if req.src_ips_exclude:
+        excluded = await _collect_addr_ids('source', req.src_ips_exclude)
+        if excluded:
+            stmt = stmt.where(Policy.id.notin_(excluded))
+
+    if req.dst_ips_exclude:
+        excluded = await _collect_addr_ids('destination', req.dst_ips_exclude)
+        if excluded:
+            stmt = stmt.where(Policy.id.notin_(excluded))
+
+    if req.services_exclude:
+        excluded = await _collect_svc_ids(req.services_exclude)
+        if excluded:
+            stmt = stmt.where(Policy.id.notin_(excluded))
+
+    if req.src_names_exclude:
+        valid = [n.strip() for n in req.src_names_exclude if n.strip()]
+        if valid:
+            q = select(models.PolicyAddressMember.policy_id).where(
+                models.PolicyAddressMember.device_id.in_(req.device_ids),
+                models.PolicyAddressMember.direction == 'source',
+                or_(*[models.PolicyAddressMember.token.ilike(f'%{n}%') for n in valid])
+            )
+            r = await db.execute(q)
+            excluded = set(r.scalars().all())
+            if excluded:
+                stmt = stmt.where(Policy.id.notin_(excluded))
+
+    if req.dst_names_exclude:
+        valid = [n.strip() for n in req.dst_names_exclude if n.strip()]
+        if valid:
+            q = select(models.PolicyAddressMember.policy_id).where(
+                models.PolicyAddressMember.device_id.in_(req.device_ids),
+                models.PolicyAddressMember.direction == 'destination',
+                or_(*[models.PolicyAddressMember.token.ilike(f'%{n}%') for n in valid])
+            )
+            r = await db.execute(q)
+            excluded = set(r.scalars().all())
+            if excluded:
+                stmt = stmt.where(Policy.id.notin_(excluded))
+
+    if req.service_names_exclude:
+        valid = [n.strip() for n in req.service_names_exclude if n.strip()]
+        if valid:
+            q = select(models.PolicyServiceMember.policy_id).where(
+                models.PolicyServiceMember.device_id.in_(req.device_ids),
+                or_(*[models.PolicyServiceMember.token.ilike(f'%{n}%') for n in valid])
+            )
+            r = await db.execute(q)
+            excluded = set(r.scalars().all())
+            if excluded:
+                stmt = stmt.where(Policy.id.notin_(excluded))
 
     # Ordering: device -> vsys -> seq -> rule_name
     stmt = stmt.order_by(Policy.device_id.asc(), Policy.vsys.asc(), Policy.seq.asc(), Policy.rule_name.asc())

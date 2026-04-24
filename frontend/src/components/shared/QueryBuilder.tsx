@@ -3,7 +3,7 @@ import { Plus, X } from 'lucide-react'
 // ─── 필드 정의 ────────────────────────────────────────────────────────────────
 
 type FieldType = 'text' | 'date' | 'select'
-type OperatorKey = 'contains' | 'equals' | 'not_equals' | 'gte' | 'lte'
+type OperatorKey = 'contains' | 'equals' | 'not_equals' | 'not_contains' | 'gte' | 'lte'
 
 interface FieldOption { value: string; label: string }
 
@@ -16,31 +16,32 @@ interface FieldDef {
   placeholder?: string
 }
 
-const QB_FIELDS: FieldDef[] = [
-  { key: 'rule_name',     label: '정책명',          type: 'text',   operators: ['contains', 'equals'], placeholder: 'web-policy' },
+export const QB_FIELDS: FieldDef[] = [
+  { key: 'rule_name',     label: '정책명',          type: 'text',   operators: ['contains', 'not_contains', 'equals', 'not_equals'], placeholder: 'web-policy' },
   { key: 'vsys',          label: '가상시스템',       type: 'text',   operators: ['contains', 'equals'], placeholder: 'vsys1' },
-  { key: 'src_ip',        label: '출발지 IP',        type: 'text',   operators: ['contains', 'equals'], placeholder: '10.0.0.0/8' },
-  { key: 'dst_ip',        label: '목적지 IP',        type: 'text',   operators: ['contains', 'equals'], placeholder: '0.0.0.0/0' },
-  { key: 'src_name',      label: '출발지 객체명',    type: 'text',   operators: ['contains', 'equals'], placeholder: 'host-10.0.0.1' },
-  { key: 'dst_name',      label: '목적지 객체명',    type: 'text',   operators: ['contains', 'equals'], placeholder: 'server-group' },
-  { key: 'service',       label: '서비스/포트',      type: 'text',   operators: ['contains', 'equals'], placeholder: 'tcp/443' },
-  { key: 'service_name',  label: '서비스 객체명',    type: 'text',   operators: ['contains', 'equals'], placeholder: 'svc-https' },
+  { key: 'src_ip',        label: '출발지 IP',        type: 'text',   operators: ['equals', 'not_equals'], placeholder: '10.0.0.0/8' },
+  { key: 'dst_ip',        label: '목적지 IP',        type: 'text',   operators: ['equals', 'not_equals'], placeholder: '0.0.0.0/0' },
+  { key: 'src_name',      label: '출발지 객체명',    type: 'text',   operators: ['contains', 'not_contains', 'equals', 'not_equals'], placeholder: 'host-10.0.0.1' },
+  { key: 'dst_name',      label: '목적지 객체명',    type: 'text',   operators: ['contains', 'not_contains', 'equals', 'not_equals'], placeholder: 'server-group' },
+  { key: 'service',       label: '서비스/포트',      type: 'text',   operators: ['equals', 'not_equals'], placeholder: 'tcp/443 또는 http' },
+  { key: 'service_name',  label: '서비스 객체명',    type: 'text',   operators: ['contains', 'not_contains', 'equals', 'not_equals'], placeholder: 'svc-https' },
   { key: 'action',        label: '액션',             type: 'text',   operators: ['equals', 'not_equals'], placeholder: 'allow' },
   { key: 'enable',        label: '활성화',           type: 'select', operators: ['equals'],
     options: [{ value: 'true', label: '활성' }, { value: 'false', label: '비활성' }] },
-  { key: 'user',          label: '사용자',           type: 'text',   operators: ['contains', 'equals'], placeholder: '' },
-  { key: 'application',   label: '애플리케이션',     type: 'text',   operators: ['contains', 'equals'], placeholder: '' },
-  { key: 'description',   label: '설명',             type: 'text',   operators: ['contains', 'equals'], placeholder: '' },
+  { key: 'user',          label: '사용자',           type: 'text',   operators: ['contains', 'not_contains', 'equals', 'not_equals'], placeholder: '' },
+  { key: 'application',   label: '애플리케이션',     type: 'text',   operators: ['contains', 'not_contains', 'equals', 'not_equals'], placeholder: '' },
+  { key: 'description',   label: '설명',             type: 'text',   operators: ['contains', 'not_contains', 'equals', 'not_equals'], placeholder: '' },
   { key: 'last_hit_from', label: '마지막 매칭 시작', type: 'date',   operators: ['gte'] },
   { key: 'last_hit_to',   label: '마지막 매칭 종료', type: 'date',   operators: ['lte'] },
 ]
 
-const OP_LABELS: Record<OperatorKey, string> = {
-  contains:   '포함',
-  equals:     '=',
-  not_equals: '≠',
-  gte:        '이후 (≥)',
-  lte:        '이전 (≤)',
+export const OP_LABELS: Record<OperatorKey, string> = {
+  contains:     '포함',
+  not_contains: '미포함',
+  equals:       '=',
+  not_equals:   '≠',
+  gte:          '이후 (≥)',
+  lte:          '이전 (≤)',
 }
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
@@ -63,32 +64,82 @@ export function buildRequestFromConditions(
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     device_ids: deviceIds,
-    rule_name: null, vsys: null, user: null, application: null,
-    description: null, action: null, enable: null,
+    rule_name: null, rule_name_negate: false,
+    vsys: null, vsys_negate: false,
+    user: null, user_negate: false,
+    application: null, application_negate: false,
+    description: null, description_negate: false,
+    action: null, action_negate: false,
+    enable: null,
     last_hit_date_from: null, last_hit_date_to: null,
     src_ips: [], dst_ips: [], services: [],
     src_names: [], dst_names: [], service_names: [],
+    src_ips_exclude: [], dst_ips_exclude: [], services_exclude: [],
+    src_names_exclude: [], dst_names_exclude: [], service_names_exclude: [],
   }
 
-  for (const { field, value } of conditions) {
+  for (const { field, operator, value } of conditions) {
     const v = value?.trim()
     if (!v) continue
+    const isNot = operator === 'not_equals' || operator === 'not_contains'
     switch (field) {
-      case 'rule_name':     payload.rule_name    = v; break
-      case 'vsys':          payload.vsys          = v; break
-      case 'user':          payload.user          = v; break
-      case 'application':   payload.application   = v; break
-      case 'description':   payload.description   = v; break
-      case 'action':        payload.action        = v; break
-      case 'enable':        payload.enable        = v === 'true'; break
-      case 'src_ip':        (payload.src_ips  as string[]).push(v); break
-      case 'dst_ip':        (payload.dst_ips  as string[]).push(v); break
-      case 'src_name':      (payload.src_names as string[]).push(v); break
-      case 'dst_name':      (payload.dst_names as string[]).push(v); break
-      case 'service':       (payload.services  as string[]).push(v); break
-      case 'service_name':  (payload.service_names as string[]).push(v); break
-      case 'last_hit_from': payload.last_hit_date_from = v; break
-      case 'last_hit_to':   payload.last_hit_date_to   = v; break
+      case 'rule_name':
+        payload.rule_name = v
+        payload.rule_name_negate = isNot
+        break
+      case 'vsys':
+        payload.vsys = v
+        payload.vsys_negate = isNot
+        break
+      case 'user':
+        payload.user = v
+        payload.user_negate = isNot
+        break
+      case 'application':
+        payload.application = v
+        payload.application_negate = isNot
+        break
+      case 'description':
+        payload.description = v
+        payload.description_negate = isNot
+        break
+      case 'action':
+        payload.action = v
+        payload.action_negate = isNot
+        break
+      case 'enable':
+        payload.enable = v === 'true'
+        break
+      case 'src_ip':
+        if (isNot) (payload.src_ips_exclude as string[]).push(v)
+        else (payload.src_ips as string[]).push(v)
+        break
+      case 'dst_ip':
+        if (isNot) (payload.dst_ips_exclude as string[]).push(v)
+        else (payload.dst_ips as string[]).push(v)
+        break
+      case 'src_name':
+        if (isNot) (payload.src_names_exclude as string[]).push(v)
+        else (payload.src_names as string[]).push(v)
+        break
+      case 'dst_name':
+        if (isNot) (payload.dst_names_exclude as string[]).push(v)
+        else (payload.dst_names as string[]).push(v)
+        break
+      case 'service':
+        if (isNot) (payload.services_exclude as string[]).push(v)
+        else (payload.services as string[]).push(v)
+        break
+      case 'service_name':
+        if (isNot) (payload.service_names_exclude as string[]).push(v)
+        else (payload.service_names as string[]).push(v)
+        break
+      case 'last_hit_from':
+        payload.last_hit_date_from = v
+        break
+      case 'last_hit_to':
+        payload.last_hit_date_to = v
+        break
     }
   }
 

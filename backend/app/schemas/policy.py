@@ -41,14 +41,20 @@ class PolicySearchRequest(BaseModel):
 
     # Basic policy attribute filters (substring match unless noted)
     vsys: Optional[str] = None
+    vsys_negate: bool = False
     rule_name: Optional[str] = None
+    rule_name_negate: bool = False
     action: Optional[str] = None  # exact match if provided
+    action_negate: bool = False
     enable: Optional[bool] = None
     user: Optional[str] = None
+    user_negate: bool = False
     application: Optional[str] = None
+    application_negate: bool = False
     security_profile: Optional[str] = None
     category: Optional[str] = None
     description: Optional[str] = None
+    description_negate: bool = False
 
     # Date range for last hit
     last_hit_date_from: Optional[datetime] = None
@@ -63,11 +69,18 @@ class PolicySearchRequest(BaseModel):
     # Multi-value (OR semantics) — IP/port based
     src_ips: Optional[List[str]] = None
     dst_ips: Optional[List[str]] = None
-    services: Optional[List[str]] = None  # tokens like 'tcp/80', '80-90', 'any'
+    services: Optional[List[str]] = None  # tokens like 'tcp/80', '80-90', 'any', or service names
     # Object name based (LIKE on PolicyAddressMember.token / PolicyServiceMember.token)
-    src_names: Optional[List[str]] = None    # 출발지 객체명 검색
-    dst_names: Optional[List[str]] = None    # 목적지 객체명 검색
-    service_names: Optional[List[str]] = None  # 서비스 객체명 검색
+    src_names: Optional[List[str]] = None
+    dst_names: Optional[List[str]] = None
+    service_names: Optional[List[str]] = None
+    # Exclude (NOT IN) variants for member-index filters
+    src_ips_exclude: Optional[List[str]] = None
+    dst_ips_exclude: Optional[List[str]] = None
+    services_exclude: Optional[List[str]] = None
+    src_names_exclude: Optional[List[str]] = None
+    dst_names_exclude: Optional[List[str]] = None
+    service_names_exclude: Optional[List[str]] = None
 
     # Paging (optional; AG-Grid usually client-side). If provided, backend slices.
     skip: Optional[int] = None

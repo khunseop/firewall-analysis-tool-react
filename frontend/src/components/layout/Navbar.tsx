@@ -1,30 +1,26 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
 import { useDeviceStore } from '@/store/deviceStore'
 import { listDevices, type Device } from '@/api/devices'
 import { cn } from '@/lib/utils'
-import {
-  LayoutDashboard, Monitor, Shield, Package, SearchCode,
-  CalendarClock, Bell, Settings, LogOut, ShieldCheck,
-  ChevronDown, ChevronRight, Search, X, PanelLeftClose, PanelLeftOpen,
-} from 'lucide-react'
+import { Bell, Settings, LogOut, ChevronDown, Search, X } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/devices', label: 'Devices', icon: Monitor },
-  { to: '/policies', label: 'Policies', icon: Shield },
-  { to: '/objects', label: 'Objects', icon: Package },
-  { to: '/analysis', label: 'Analysis', icon: SearchCode },
-  { to: '/schedules', label: 'Schedules', icon: CalendarClock },
+  { to: '/', label: 'Dashboard', end: true },
+  { to: '/devices', label: 'Devices' },
+  { to: '/policies', label: 'Policies' },
+  { to: '/objects', label: 'Objects' },
+  { to: '/analysis', label: 'Analysis' },
+  { to: '/schedules', label: 'Schedules' },
 ]
 
 const VENDOR_DOT: Record<string, string> = {
   paloalto: 'bg-orange-400',
-  ngf:      'bg-blue-400',
-  mf2:      'bg-cyan-400',
-  mock:     'bg-ds-outline',
+  ngf: 'bg-blue-400',
+  mf2: 'bg-cyan-400',
+  mock: 'bg-ds-outline',
 }
 
 function DeviceItem({ d, selected, onToggle }: { d: Device; selected: boolean; onToggle: () => void }) {
@@ -53,9 +49,10 @@ function DeviceItem({ d, selected, onToggle }: { d: Device; selected: boolean; o
   )
 }
 
-function DevicePanel() {
-  const [open, setOpen] = useState(true)
+function DeviceDropdown() {
+  const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const { selectedIds, toggleId, clearSelection, selectAll } = useDeviceStore()
 
@@ -64,6 +61,17 @@ function DevicePanel() {
     queryFn: listDevices,
     staleTime: 5 * 60_000,
   })
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
 
   const q = search.trim().toLowerCase()
 
@@ -74,7 +82,6 @@ function DevicePanel() {
     )
   }, [devices, q])
 
-  // Group devices by their group attribute (only when not searching)
   const grouped = useMemo(() => {
     if (q) return null
     const map = new Map<string, typeof devices>()
@@ -84,7 +91,6 @@ function DevicePanel() {
       arr.push(d)
       map.set(key, arr)
     }
-    // Sort: selected devices first within each group
     for (const [key, arr] of map) {
       map.set(key, [...arr].sort((a, b) => {
         const aS = selectedIds.includes(a.id) ? 0 : 1
@@ -99,29 +105,33 @@ function DevicePanel() {
   const isAllSelected = allIds.length > 0 && allIds.every((id) => selectedIds.includes(id))
 
   return (
-    <div className="mx-3 mb-1 rounded-xl border border-ds-outline-variant/10 bg-ds-surface-container-lowest/50 overflow-hidden">
+    <div ref={containerRef} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-ds-surface-container-low/40 transition-colors"
+        className={cn(
+          'flex items-center gap-1.5 text-sm rounded-lg px-3 py-1.5 border transition-colors',
+          open
+            ? 'border-ds-tertiary/40 bg-ds-tertiary/5 text-ds-tertiary'
+            : 'border-ds-outline-variant/30 text-ds-on-surface-variant hover:bg-ds-surface-container-high/50 hover:text-ds-on-surface'
+        )}
       >
-        <span className="text-[9px] font-bold uppercase tracking-widest text-ds-on-surface-variant">
-          Device Selection
+        <span className="font-medium">
+          {selectedIds.length > 0 ? `장비 ${selectedIds.length}개 선택` : '장비 선택'}
         </span>
-        <div className="flex items-center gap-1.5">
-          {selectedIds.length > 0 && (
-            <span className="text-[9px] font-bold bg-ds-tertiary text-white rounded-full px-1.5 py-0.5 leading-none">
-              {selectedIds.length}
-            </span>
-          )}
-          {open
-            ? <ChevronDown className="w-3 h-3 text-ds-on-surface-variant" />
-            : <ChevronRight className="w-3 h-3 text-ds-on-surface-variant" />}
-        </div>
+        {selectedIds.length > 0 && (
+          <span className="text-[9px] font-bold bg-ds-tertiary text-white rounded-full px-1.5 py-0.5 leading-none">
+            {selectedIds.length}
+          </span>
+        )}
+        <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && (
-        <>
-          <div className="px-2 pb-1.5">
+        <div className="absolute right-0 top-full mt-1.5 w-72 bg-ds-surface-container-lowest rounded-xl border border-ds-outline-variant/15 shadow-lg z-50">
+          <div className="px-3 pt-3 pb-1.5">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-ds-on-surface-variant mb-2">
+              Device Selection
+            </p>
             <div className="flex items-center gap-1.5 bg-ds-surface-container-low rounded-lg px-2 py-1.5 border border-ds-outline-variant/15">
               <Search className="w-3 h-3 text-ds-on-surface-variant shrink-0" />
               <input
@@ -138,13 +148,12 @@ function DevicePanel() {
             </div>
           </div>
 
-          <div className="max-h-[200px] overflow-y-auto px-2 pb-1">
+          <div className="max-h-[240px] overflow-y-auto px-2 pb-1">
             {filtered.length === 0 && devices.length === 0 ? (
               <p className="text-[10px] text-ds-on-surface-variant text-center py-3 italic">장비가 없습니다</p>
             ) : filtered.length === 0 && q ? (
               <p className="text-[10px] text-ds-on-surface-variant text-center py-3 italic">검색 결과 없음</p>
             ) : grouped ? (
-              // 그룹별 표시
               Array.from(grouped.entries()).map(([groupName, groupDevices]) => (
                 <div key={groupName}>
                   {grouped.size > 1 && (
@@ -152,14 +161,11 @@ function DevicePanel() {
                   )}
                   {groupDevices.map((d) => {
                     const selected = selectedIds.includes(d.id)
-                    return (
-                      <DeviceItem key={d.id} d={d} selected={selected} onToggle={() => toggleId(d.id)} />
-                    )
+                    return <DeviceItem key={d.id} d={d} selected={selected} onToggle={() => toggleId(d.id)} />
                   })}
                 </div>
               ))
             ) : (
-              // 검색 결과 평면 표시
               filtered.map((d) => {
                 const selected = selectedIds.includes(d.id)
                 return <DeviceItem key={d.id} d={d} selected={selected} onToggle={() => toggleId(d.id)} />
@@ -183,20 +189,14 @@ function DevicePanel() {
               초기화
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   )
 }
 
-interface NavbarProps {
-  collapsed?: boolean
-  onToggleCollapse?: () => void
-}
-
-export function Navbar({ collapsed = false, onToggleCollapse }: NavbarProps) {
+export function Navbar() {
   const logout = useAuthStore((s) => s.logout)
-  const { selectedIds } = useDeviceStore()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -204,202 +204,72 @@ export function Navbar({ collapsed = false, onToggleCollapse }: NavbarProps) {
     navigate('/login')
   }
 
-  if (collapsed) {
-    return (
-      <aside className="h-full w-full flex flex-col bg-ds-surface-container-low border-r border-ds-outline-variant/5">
-        {/* Logo — icon only + expand button */}
-        <div className="flex flex-col items-center gap-1 py-4">
-          <div className="relative w-9 h-9 rounded-xl bg-ds-tertiary flex items-center justify-center shrink-0 shadow-lg shadow-ds-tertiary/20">
-            <ShieldCheck className="w-5 h-5 text-white" strokeWidth={2.5} />
-            {selectedIds.length > 0 && (
-              <span className="absolute -top-1 -right-1 text-[8px] font-bold bg-ds-error text-white rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                {selectedIds.length > 9 ? '9+' : selectedIds.length}
-              </span>
-            )}
-          </div>
-          {onToggleCollapse && (
-            <button
-              onClick={onToggleCollapse}
-              title="사이드바 펼치기"
-              className="p-1.5 rounded-lg text-ds-on-surface-variant/40 hover:text-ds-on-surface hover:bg-ds-surface-container-high/50 transition-all duration-200"
-            >
-              <PanelLeftOpen className="w-4 h-4" strokeWidth={2} />
-            </button>
-          )}
-        </div>
-
-        {/* Nav icons */}
-        <nav className="flex-1 overflow-y-auto px-1.5 space-y-1 pt-1">
-          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              title={label}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center justify-center p-2.5 rounded-xl transition-all duration-200',
-                  isActive
-                    ? 'bg-white text-ds-tertiary shadow-sm'
-                    : 'text-ds-on-surface-variant hover:text-ds-on-surface hover:bg-white/50'
-                )
-              }
-            >
-              {({ isActive }) => (
-                <Icon
-                  className={cn(
-                    'w-5 h-5 shrink-0 transition-colors',
-                    isActive ? 'text-ds-tertiary' : 'text-ds-on-surface-variant'
-                  )}
-                  strokeWidth={isActive ? 2.5 : 2}
-                />
-              )}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Bottom actions */}
-        <div className="p-1.5 border-t border-ds-outline-variant/10 space-y-1">
-          <NavLink
-            to="/notifications"
-            title="활동 로그"
-            className={({ isActive }) =>
-              cn(
-                'flex items-center justify-center p-2.5 rounded-xl transition-all duration-200',
-                isActive ? 'bg-white text-ds-tertiary shadow-sm' : 'text-ds-on-surface-variant hover:bg-white/50 hover:text-ds-on-surface'
-              )
-            }
-          >
-            <Bell className="w-5 h-5" strokeWidth={2} />
-          </NavLink>
-
-          <NavLink
-            to="/settings"
-            title="설정"
-            className={({ isActive }) =>
-              cn(
-                'flex items-center justify-center p-2.5 rounded-xl transition-all duration-200',
-                isActive ? 'bg-white text-ds-tertiary shadow-sm' : 'text-ds-on-surface-variant hover:bg-white/50 hover:text-ds-on-surface'
-              )
-            }
-          >
-            <Settings className="w-5 h-5" strokeWidth={2} />
-          </NavLink>
-
-          <div className="mx-1 my-1 border-t border-ds-outline-variant/15" />
-
-          <button
-            onClick={handleLogout}
-            title="로그아웃"
-            className="w-full flex items-center justify-center p-2.5 rounded-xl transition-all duration-200 text-ds-error/60 hover:bg-ds-error/8 hover:text-ds-error"
-          >
-            <LogOut className="w-5 h-5" strokeWidth={2} />
-          </button>
-        </div>
-      </aside>
-    )
-  }
-
   return (
-    <aside className="h-full w-full flex flex-col bg-ds-surface-container-low border-r border-ds-outline-variant/5">
-      {/* Logo Area */}
-      <div className="flex items-center gap-3 px-4 py-5">
-        <div className="w-9 h-9 rounded-xl bg-ds-tertiary flex items-center justify-center shrink-0 shadow-lg shadow-ds-tertiary/20">
-          <ShieldCheck className="w-5 h-5 text-white" strokeWidth={2.5} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <span className="text-lg font-extrabold tracking-tighter text-ds-on-surface font-headline leading-none block">FAT</span>
-          <span className="text-[10px] text-ds-on-surface-variant font-medium mt-1.5 block leading-tight">Firewall Analysis Tool</span>
-        </div>
-        {onToggleCollapse && (
-          <button
-            onClick={onToggleCollapse}
-            title="사이드바 접기"
-            className="p-1.5 rounded-lg text-ds-on-surface-variant/50 hover:text-ds-on-surface hover:bg-ds-surface-container-high/50 transition-all duration-200 shrink-0"
+    <header className="h-full w-full flex items-center px-4 md:px-6 gap-6 bg-ds-surface-container-low border-b border-ds-outline-variant/10">
+      {/* Title */}
+      <span className="text-base font-extrabold tracking-tighter text-ds-on-surface font-headline shrink-0">
+        FAT
+      </span>
+
+      {/* Nav Items */}
+      <nav className="flex items-center gap-0.5 flex-1 overflow-x-auto min-w-0">
+        {NAV_ITEMS.map(({ to, label, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) =>
+              cn(
+                'px-3 py-1 text-sm rounded-md transition-colors whitespace-nowrap',
+                isActive
+                  ? 'text-ds-tertiary font-bold bg-ds-tertiary/8'
+                  : 'text-ds-on-surface-variant hover:text-ds-on-surface hover:bg-ds-surface-container-high/50'
+              )
+            }
           >
-            <PanelLeftClose className="w-4 h-4" strokeWidth={2} />
-          </button>
-        )}
-      </div>
-
-      {/* Device Panel */}
-      <DevicePanel />
-
-      {/* Main Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 space-y-1 pt-1">
-        <ul className="space-y-1">
-          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
-            <li key={to}>
-              <NavLink
-                to={to}
-                end={end}
-                className={({ isActive }) =>
-                  cn(
-                    'group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-200',
-                    isActive
-                      ? 'bg-white text-ds-tertiary font-bold shadow-sm'
-                      : 'text-ds-on-surface-variant hover:text-ds-on-surface hover:bg-white/50'
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <Icon
-                      className={cn(
-                        'w-4.5 h-4.5 shrink-0 transition-colors',
-                        isActive ? 'text-ds-tertiary' : 'text-ds-on-surface-variant group-hover:text-ds-on-surface'
-                      )}
-                      strokeWidth={isActive ? 2.5 : 2}
-                    />
-                    <span className="tracking-tight">{label}</span>
-                  </>
-                )}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+            {label}
+          </NavLink>
+        ))}
       </nav>
 
-      {/* Bottom Actions */}
-      <div className="border-t border-ds-outline-variant/10 bg-ds-surface-container-low/30">
-        <div className="flex items-center px-2 pt-2">
-          <NavLink
-            to="/notifications"
-            title="활동 로그"
-            className={({ isActive }) =>
-              cn(
-                'p-2.5 rounded-xl transition-all duration-200 flex items-center justify-center flex-1',
-                isActive ? 'bg-white text-ds-tertiary shadow-sm' : 'text-ds-on-surface-variant hover:bg-white/50 hover:text-ds-on-surface'
-              )
-            }
-          >
-            <Bell className="w-5 h-5" strokeWidth={2} />
-          </NavLink>
+      {/* Right Actions */}
+      <div className="flex items-center gap-1 shrink-0">
+        <DeviceDropdown />
 
-          <NavLink
-            to="/settings"
-            title="설정"
-            className={({ isActive }) =>
-              cn(
-                'p-2.5 rounded-xl transition-all duration-200 flex items-center justify-center flex-1',
-                isActive ? 'bg-white text-ds-tertiary shadow-sm' : 'text-ds-on-surface-variant hover:bg-white/50 hover:text-ds-on-surface'
-              )
-            }
-          >
-            <Settings className="w-5 h-5" strokeWidth={2} />
-          </NavLink>
-        </div>
+        <NavLink
+          to="/notifications"
+          className={({ isActive }) =>
+            cn(
+              'p-2 rounded-lg transition-colors',
+              isActive ? 'text-ds-tertiary bg-ds-tertiary/8' : 'text-ds-on-surface-variant hover:bg-ds-surface-container-high/50 hover:text-ds-on-surface'
+            )
+          }
+        >
+          <Bell className="w-4 h-4" strokeWidth={2} />
+        </NavLink>
 
-        <div className="px-3 pt-1 pb-3">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all duration-200 text-ds-error/60 hover:bg-ds-error/8 hover:text-ds-error group"
-          >
-            <LogOut className="w-4 h-4 shrink-0" strokeWidth={2} />
-            <span className="text-sm font-semibold tracking-tight">로그아웃</span>
-          </button>
-        </div>
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            cn(
+              'p-2 rounded-lg transition-colors',
+              isActive ? 'text-ds-tertiary bg-ds-tertiary/8' : 'text-ds-on-surface-variant hover:bg-ds-surface-container-high/50 hover:text-ds-on-surface'
+            )
+          }
+        >
+          <Settings className="w-4 h-4" strokeWidth={2} />
+        </NavLink>
+
+        <div className="w-px h-4 bg-ds-outline-variant/20 mx-1" />
+
+        <button
+          onClick={handleLogout}
+          className="p-2 rounded-lg transition-colors text-ds-error/50 hover:bg-ds-error/8 hover:text-ds-error"
+          title="로그아웃"
+        >
+          <LogOut className="w-4 h-4" strokeWidth={2} />
+        </button>
       </div>
-    </aside>
+    </header>
   )
 }

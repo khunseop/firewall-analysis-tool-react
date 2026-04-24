@@ -72,14 +72,20 @@ export interface ServiceGroup {
 export interface PolicySearchRequest {
   device_ids: number[]
   vsys?: string
+  vsys_negate?: boolean
   rule_name?: string
+  rule_name_negate?: boolean
   action?: string
+  action_negate?: boolean
   enable?: boolean
   user?: string
+  user_negate?: boolean
   application?: string
+  application_negate?: boolean
   security_profile?: string
   category?: string
   description?: string
+  description_negate?: boolean
   last_hit_date_from?: string
   last_hit_date_to?: string
   src_ip?: string
@@ -92,6 +98,12 @@ export interface PolicySearchRequest {
   src_names?: string[]
   dst_names?: string[]
   service_names?: string[]
+  src_ips_exclude?: string[]
+  dst_ips_exclude?: string[]
+  services_exclude?: string[]
+  src_names_exclude?: string[]
+  dst_names_exclude?: string[]
+  service_names_exclude?: string[]
   skip?: number
   limit?: number
 }

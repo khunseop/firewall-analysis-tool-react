@@ -14,7 +14,7 @@ import { daysSinceHit } from '@/lib/utils'
 import { ObjectDetailModal } from '@/components/shared/ObjectDetailModal'
 import { PolicyHistoryModal } from '@/components/shared/PolicyHistoryModal'
 import { PolicyDetailModal } from '@/components/shared/PolicyDetailModal'
-import { QueryBuilder, buildRequestFromConditions, type Condition } from '@/components/shared/QueryBuilder'
+import { QueryBuilder, buildRequestFromConditions, QB_FIELDS, OP_LABELS, type Condition } from '@/components/shared/QueryBuilder'
 import { useDeviceStore } from '@/store/deviceStore'
 
 const ACTION_BADGE: Record<string, string> = {
@@ -301,12 +301,17 @@ export function PoliciesPage() {
           {/* 활성 조건 태그 (패널 닫혔을 때) */}
           {!filtersOpen && hasConditions && (
             <div className="flex flex-wrap gap-1.5 flex-1">
-              {conditions.filter(c => c.value.trim()).map((c, i) => (
-                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-ds-tertiary/10 text-ds-tertiary rounded text-[11px] font-semibold">
-                  {c.field}: {c.value}
-                  <button onClick={() => setConditions(prev => prev.filter((_, j) => j !== i))} className="hover:text-ds-error"><X className="w-3 h-3" /></button>
-                </span>
-              ))}
+              {conditions.filter(c => c.value.trim()).map((c, i) => {
+                const fieldLabel = QB_FIELDS.find(f => f.key === c.field)?.label ?? c.field
+                const opLabel = OP_LABELS[c.operator as keyof typeof OP_LABELS] ?? c.operator
+                const isNot = c.operator === 'not_equals' || c.operator === 'not_contains'
+                return (
+                  <span key={i} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${isNot ? 'bg-ds-error/10 text-ds-error' : 'bg-ds-tertiary/10 text-ds-tertiary'}`}>
+                    {fieldLabel} <span className="opacity-60">{opLabel}</span> {c.value}
+                    <button onClick={() => setConditions(prev => prev.filter((_, j) => j !== i))} className="hover:opacity-70 ml-0.5"><X className="w-3 h-3" /></button>
+                  </span>
+                )
+              })}
             </div>
           )}
 
