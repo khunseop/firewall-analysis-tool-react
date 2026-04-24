@@ -226,9 +226,9 @@ export function PoliciesPage() {
         </span>
       ),
     },
-    { field: 'source',      headerName: '출발지', flex: 1, minWidth: 140, cellRenderer: (p: { value: string }) => <InlineTagCell value={p.value} /> },
-    { field: 'destination', headerName: '목적지', flex: 1, minWidth: 140, cellRenderer: (p: { value: string }) => <InlineTagCell value={p.value} /> },
-    { field: 'service',     headerName: '서비스', minWidth: 120,           cellRenderer: (p: { value: string }) => <InlineTagCell value={p.value} /> },
+    { field: 'source',      headerName: '출발지', minWidth: 160, cellRenderer: (p: { value: string }) => <InlineTagCell value={p.value} /> },
+    { field: 'destination', headerName: '목적지', minWidth: 160, cellRenderer: (p: { value: string }) => <InlineTagCell value={p.value} /> },
+    { field: 'service',     headerName: '서비스', minWidth: 130, cellRenderer: (p: { value: string }) => <InlineTagCell value={p.value} /> },
     {
       field: 'user', headerName: '사용자', minWidth: 100,
       cellRenderer: (p: { value: string | null }) => {

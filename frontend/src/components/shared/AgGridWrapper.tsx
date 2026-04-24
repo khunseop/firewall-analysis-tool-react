@@ -58,8 +58,12 @@ function AgGridWrapperInner<T>(
   )
 
   const handleFirstDataRendered = useCallback(() => {
-    gridApiRef.current?.autoSizeAllColumns()
+    gridApiRef.current?.autoSizeAllColumns(false)
   }, [])
+
+  const handleModelUpdated = useCallback(() => {
+    if (rowData.length > 0) gridApiRef.current?.autoSizeAllColumns(false)
+  }, [rowData.length])
 
   return (
     <div className={`ag-theme-quartz w-full relative${onRowClicked ? ' ag-clickable-rows' : ''}`} style={{ height }}>
@@ -69,6 +73,7 @@ function AgGridWrapperInner<T>(
         getRowId={getRowId}
         onGridReady={handleGridReady}
         onFirstDataRendered={handleFirstDataRendered}
+        onModelUpdated={handleModelUpdated}
         getRowStyle={getRowStyle}
         quickFilterText={quickFilterText}
         onRowClicked={onRowClicked}
