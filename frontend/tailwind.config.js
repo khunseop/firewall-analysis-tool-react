@@ -99,6 +99,9 @@ export default {
           'surface-tint': '#565e74',
         },
       },
+      spacing: {
+        13: '3.25rem',
+      },
       borderRadius: {
         // shadcn vars
         lg: 'var(--radius)',
@@ -112,6 +115,7 @@ export default {
         ambient: '0 12px 32px rgba(42, 52, 57, 0.06)',
         'ambient-md': '0 8px 24px rgba(42, 52, 57, 0.08)',
         'ambient-sm': '0 4px 12px rgba(42, 52, 57, 0.05)',
+        navbar: '0 1px 0 rgba(169, 180, 185, 0.15), 0 4px 16px rgba(42, 52, 57, 0.06)',
       },
     },
   },

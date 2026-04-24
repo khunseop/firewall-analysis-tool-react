@@ -61,7 +61,8 @@
   }
 
   body {
-    background-color: #f7f9fb;
+    background-color: #f4f7fa;
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0, 91, 196, 0.04) 0%, transparent 70%);
     color: #2a3439;
     font-family: 'Inter', 'Pretendard', system-ui, sans-serif;
     margin: 0;
@@ -93,9 +94,10 @@
     border: 1px solid rgba(169, 180, 185, 0.2);
   }
   .glass-panel {
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.55);
   }
   .btn-primary-gradient {
     background: linear-gradient(135deg, #005bc4, #004fad);

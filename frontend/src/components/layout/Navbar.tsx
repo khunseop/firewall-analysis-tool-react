@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useDeviceStore } from '@/store/deviceStore'
 import { listDevices, type Device } from '@/api/devices'
 import { cn } from '@/lib/utils'
-import { Bell, Settings, LogOut, ChevronDown, Search, X } from 'lucide-react'
+import { ChevronDown, Search, X } from 'lucide-react'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', end: true },
@@ -109,14 +109,14 @@ function DeviceDropdown() {
       <button
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          'flex items-center gap-1.5 text-sm rounded-lg px-3 py-1.5 border transition-colors',
+          'flex items-center gap-1.5 text-[13px] rounded-lg px-3 py-1.5 transition-all',
           open
-            ? 'border-ds-tertiary/40 bg-ds-tertiary/5 text-ds-tertiary'
-            : 'border-ds-outline-variant/30 text-ds-on-surface-variant hover:bg-ds-surface-container-high/50 hover:text-ds-on-surface'
+            ? 'bg-ds-tertiary/10 text-ds-tertiary'
+            : 'text-ds-on-surface-variant hover:bg-black/5 hover:text-ds-on-surface'
         )}
       >
         <span className="font-medium">
-          {selectedIds.length > 0 ? `장비 ${selectedIds.length}개 선택` : '장비 선택'}
+          {selectedIds.length > 0 ? `장비 ${selectedIds.length}개` : '장비 선택'}
         </span>
         {selectedIds.length > 0 && (
           <span className="text-[9px] font-bold bg-ds-tertiary text-white rounded-full px-1.5 py-0.5 leading-none">
@@ -127,12 +127,12 @@ function DeviceDropdown() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-72 bg-ds-surface-container-lowest rounded-xl border border-ds-outline-variant/15 shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-white/90 backdrop-blur-xl rounded-xl border border-white/60 shadow-ambient-md z-50">
           <div className="px-3 pt-3 pb-1.5">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-ds-on-surface-variant mb-2">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60 mb-2">
               Device Selection
             </p>
-            <div className="flex items-center gap-1.5 bg-ds-surface-container-low rounded-lg px-2 py-1.5 border border-ds-outline-variant/15">
+            <div className="flex items-center gap-1.5 bg-ds-surface-container-low rounded-lg px-2 py-1.5">
               <Search className="w-3 h-3 text-ds-on-surface-variant shrink-0" />
               <input
                 value={search}
@@ -205,14 +205,14 @@ export function Navbar() {
   }
 
   return (
-    <header className="h-full w-full flex items-center px-4 md:px-6 gap-6 bg-ds-surface-container-low border-b border-ds-outline-variant/10">
-      {/* Title */}
-      <span className="text-base font-extrabold tracking-tighter text-ds-on-surface font-headline shrink-0">
+    <header className="h-full w-full flex items-center px-4 md:px-6 gap-6 bg-white/80 backdrop-blur-xl shadow-navbar">
+      {/* Logo */}
+      <span className="text-[15px] font-extrabold tracking-tight text-ds-tertiary font-headline shrink-0">
         FAT
       </span>
 
-      {/* Nav Items */}
-      <nav className="flex items-center gap-0.5 flex-1 overflow-x-auto min-w-0">
+      {/* Nav */}
+      <nav className="flex items-center flex-1 overflow-x-auto min-w-0 h-full">
         {NAV_ITEMS.map(({ to, label, end }) => (
           <NavLink
             key={to}
@@ -220,10 +220,11 @@ export function Navbar() {
             end={end}
             className={({ isActive }) =>
               cn(
-                'px-3 py-1 text-sm rounded-md transition-colors whitespace-nowrap',
+                'relative flex items-center h-full px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors',
+                'after:absolute after:bottom-0 after:left-3 after:right-3 after:h-[2px] after:rounded-full after:transition-all',
                 isActive
-                  ? 'text-ds-tertiary font-bold bg-ds-tertiary/8'
-                  : 'text-ds-on-surface-variant hover:text-ds-on-surface hover:bg-ds-surface-container-high/50'
+                  ? 'text-ds-tertiary after:bg-ds-tertiary'
+                  : 'text-ds-on-surface-variant hover:text-ds-on-surface after:bg-transparent'
               )
             }
           >
@@ -232,42 +233,43 @@ export function Navbar() {
         ))}
       </nav>
 
-      {/* Right Actions */}
-      <div className="flex items-center gap-1 shrink-0">
+      {/* Right */}
+      <div className="flex items-center gap-0.5 shrink-0">
         <DeviceDropdown />
+
+        <div className="w-px h-4 bg-ds-outline-variant/20 mx-2" />
 
         <NavLink
           to="/notifications"
           className={({ isActive }) =>
             cn(
-              'p-2 rounded-lg transition-colors',
-              isActive ? 'text-ds-tertiary bg-ds-tertiary/8' : 'text-ds-on-surface-variant hover:bg-ds-surface-container-high/50 hover:text-ds-on-surface'
+              'px-3 py-1.5 text-[13px] font-medium rounded-lg transition-colors',
+              isActive ? 'text-ds-tertiary bg-ds-tertiary/8' : 'text-ds-on-surface-variant hover:bg-black/5 hover:text-ds-on-surface'
             )
           }
         >
-          <Bell className="w-4 h-4" strokeWidth={2} />
+          Notifications
         </NavLink>
 
         <NavLink
           to="/settings"
           className={({ isActive }) =>
             cn(
-              'p-2 rounded-lg transition-colors',
-              isActive ? 'text-ds-tertiary bg-ds-tertiary/8' : 'text-ds-on-surface-variant hover:bg-ds-surface-container-high/50 hover:text-ds-on-surface'
+              'px-3 py-1.5 text-[13px] font-medium rounded-lg transition-colors',
+              isActive ? 'text-ds-tertiary bg-ds-tertiary/8' : 'text-ds-on-surface-variant hover:bg-black/5 hover:text-ds-on-surface'
             )
           }
         >
-          <Settings className="w-4 h-4" strokeWidth={2} />
+          Settings
         </NavLink>
 
-        <div className="w-px h-4 bg-ds-outline-variant/20 mx-1" />
+        <div className="w-px h-4 bg-ds-outline-variant/20 mx-2" />
 
         <button
           onClick={handleLogout}
-          className="p-2 rounded-lg transition-colors text-ds-error/50 hover:bg-ds-error/8 hover:text-ds-error"
-          title="로그아웃"
+          className="px-3 py-1.5 text-[13px] font-medium rounded-lg transition-colors text-ds-on-surface-variant/60 hover:bg-ds-error/8 hover:text-ds-error"
         >
-          <LogOut className="w-4 h-4" strokeWidth={2} />
+          Logout
         </button>
       </div>
     </header>
