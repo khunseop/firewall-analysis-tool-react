@@ -161,8 +161,7 @@ export function SchedulesPage() {
       {/* Page header */}
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-ds-on-surface font-headline">동기화 스케줄</h1>
-          <p className="text-ds-on-surface-variant text-sm mt-1">주기적인 자동 동기화 스케줄을 관리합니다.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Schedules</h1>
         </div>
         <button
           onClick={() => { setEditTarget(null); setFormOpen(true) }}

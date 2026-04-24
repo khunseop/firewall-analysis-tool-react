@@ -251,8 +251,7 @@ export function DevicesPage() {
       {/* Page header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tighter text-ds-on-surface font-headline">장비 관리</h1>
-          <p className="text-ds-on-surface-variant text-sm mt-1 max-w-lg">방화벽 장비 등록, 연결 테스트 및 동기화를 관리합니다.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Devices</h1>
         </div>
         <div className="flex items-center gap-2">
           <button

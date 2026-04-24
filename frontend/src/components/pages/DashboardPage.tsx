@@ -199,8 +199,7 @@ export function DashboardPage() {
       {/* Header */}
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tighter text-ds-on-surface font-headline">대시보드</h1>
-          <p className="text-ds-on-surface-variant text-sm mt-1.5 font-medium">실시간 방화벽 장비 및 동기화 인프라 현황</p>
+          <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Dashboard</h1>
         </div>
         <button
           onClick={() => queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })}

@@ -282,8 +282,7 @@ export function AnalysisPage() {
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ds-on-surface font-headline">정책 분석</h1>
-        <p className="text-ds-on-surface-variant text-sm mt-1">6가지 분석 유형으로 방화벽 정책의 문제점을 탐지합니다.</p>
+        <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Analysis</h1>
       </div>
 
       {/* Config panel */}

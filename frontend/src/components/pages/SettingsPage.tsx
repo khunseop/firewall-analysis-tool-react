@@ -453,8 +453,7 @@ export function SettingsPage() {
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ds-on-surface font-headline">설정</h1>
-        <p className="text-ds-on-surface-variant text-sm mt-1">시스템 설정을 관리합니다.</p>
+        <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Settings</h1>
       </div>
 
       {/* Settings panel */}

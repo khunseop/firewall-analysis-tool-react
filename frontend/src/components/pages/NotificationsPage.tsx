@@ -97,8 +97,7 @@ export function NotificationsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tighter text-ds-on-surface font-headline">활동 로그</h1>
-        <p className="text-ds-on-surface-variant text-sm mt-1">동기화, 분석, 시스템 이벤트 기록을 확인합니다.</p>
+        <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Notifications</h1>
       </div>
 
       {/* Search / date filter bar */}

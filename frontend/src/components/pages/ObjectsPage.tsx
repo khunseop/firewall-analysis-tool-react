@@ -257,8 +257,7 @@ export function ObjectsPage() {
     <div className="space-y-4">
       {/* Page header */}
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight text-ds-on-surface font-headline">오브젝트</h1>
-        <p className="text-ds-on-surface-variant text-xs mt-0.5">네트워크 객체, 그룹, 서비스를 확인하고 정책과 연계합니다.</p>
+        <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Objects</h1>
       </header>
 
       {/* Tabs + Grid */}
