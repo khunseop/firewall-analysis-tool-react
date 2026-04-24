@@ -207,8 +207,8 @@ export function Navbar({ collapsed = false, onToggleCollapse }: NavbarProps) {
   if (collapsed) {
     return (
       <aside className="h-full w-full flex flex-col bg-ds-surface-container-low border-r border-ds-outline-variant/5">
-        {/* Logo — icon only */}
-        <div className="flex items-center justify-center py-5">
+        {/* Logo — icon only + expand button */}
+        <div className="flex flex-col items-center gap-1 py-4">
           <div className="relative w-9 h-9 rounded-xl bg-ds-tertiary flex items-center justify-center shrink-0 shadow-lg shadow-ds-tertiary/20">
             <ShieldCheck className="w-5 h-5 text-white" strokeWidth={2.5} />
             {selectedIds.length > 0 && (
@@ -217,6 +217,15 @@ export function Navbar({ collapsed = false, onToggleCollapse }: NavbarProps) {
               </span>
             )}
           </div>
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              title="사이드바 펼치기"
+              className="p-1.5 rounded-lg text-ds-on-surface-variant/40 hover:text-ds-on-surface hover:bg-ds-surface-container-high/50 transition-all duration-200"
+            >
+              <PanelLeftOpen className="w-4 h-4" strokeWidth={2} />
+            </button>
+          )}
         </div>
 
         {/* Nav icons */}
@@ -277,24 +286,15 @@ export function Navbar({ collapsed = false, onToggleCollapse }: NavbarProps) {
             <Settings className="w-5 h-5" strokeWidth={2} />
           </NavLink>
 
+          <div className="mx-1 my-1 border-t border-ds-outline-variant/15" />
+
           <button
             onClick={handleLogout}
             title="로그아웃"
-            className="w-full flex items-center justify-center p-2.5 rounded-xl transition-all duration-200 text-ds-on-surface-variant hover:bg-ds-error/5 hover:text-ds-error"
+            className="w-full flex items-center justify-center p-2.5 rounded-xl transition-all duration-200 text-ds-error/60 hover:bg-ds-error/8 hover:text-ds-error"
           >
             <LogOut className="w-5 h-5" strokeWidth={2} />
           </button>
-
-          {/* Expand toggle */}
-          {onToggleCollapse && (
-            <button
-              onClick={onToggleCollapse}
-              title="사이드바 펼치기"
-              className="w-full flex items-center justify-center p-2.5 rounded-xl transition-all duration-200 text-ds-on-surface-variant hover:bg-ds-surface-container-high/50 hover:text-ds-on-surface"
-            >
-              <PanelLeftOpen className="w-5 h-5" strokeWidth={2} />
-            </button>
-          )}
         </div>
       </aside>
     )
@@ -303,14 +303,23 @@ export function Navbar({ collapsed = false, onToggleCollapse }: NavbarProps) {
   return (
     <aside className="h-full w-full flex flex-col bg-ds-surface-container-low border-r border-ds-outline-variant/5">
       {/* Logo Area */}
-      <div className="flex items-center gap-3 px-6 py-6">
+      <div className="flex items-center gap-3 px-4 py-5">
         <div className="w-9 h-9 rounded-xl bg-ds-tertiary flex items-center justify-center shrink-0 shadow-lg shadow-ds-tertiary/20">
           <ShieldCheck className="w-5 h-5 text-white" strokeWidth={2.5} />
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <span className="text-lg font-extrabold tracking-tighter text-ds-on-surface font-headline leading-none block">FAT</span>
           <span className="text-[10px] text-ds-on-surface-variant font-medium mt-1.5 block leading-tight">Firewall Analysis Tool</span>
         </div>
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            title="사이드바 접기"
+            className="p-1.5 rounded-lg text-ds-on-surface-variant/50 hover:text-ds-on-surface hover:bg-ds-surface-container-high/50 transition-all duration-200 shrink-0"
+          >
+            <PanelLeftClose className="w-4 h-4" strokeWidth={2} />
+          </button>
+        )}
       </div>
 
       {/* Device Panel */}
@@ -352,8 +361,8 @@ export function Navbar({ collapsed = false, onToggleCollapse }: NavbarProps) {
       </nav>
 
       {/* Bottom Actions */}
-      <div className="p-3 border-t border-ds-outline-variant/10 bg-ds-surface-container-low/30">
-        <div className="flex items-center justify-between">
+      <div className="border-t border-ds-outline-variant/10 bg-ds-surface-container-low/30">
+        <div className="flex items-center px-2 pt-2">
           <NavLink
             to="/notifications"
             title="활동 로그"
@@ -379,25 +388,16 @@ export function Navbar({ collapsed = false, onToggleCollapse }: NavbarProps) {
           >
             <Settings className="w-5 h-5" strokeWidth={2} />
           </NavLink>
+        </div>
 
+        <div className="px-3 pt-1 pb-3">
           <button
             onClick={handleLogout}
-            title="로그아웃"
-            className="p-2.5 rounded-xl transition-all duration-200 flex items-center justify-center flex-1 text-ds-on-surface-variant hover:bg-ds-error/5 hover:text-ds-error"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all duration-200 text-ds-error/60 hover:bg-ds-error/8 hover:text-ds-error group"
           >
-            <LogOut className="w-5 h-5" strokeWidth={2} />
+            <LogOut className="w-4 h-4 shrink-0" strokeWidth={2} />
+            <span className="text-sm font-semibold tracking-tight">로그아웃</span>
           </button>
-
-          {/* Collapse toggle */}
-          {onToggleCollapse && (
-            <button
-              onClick={onToggleCollapse}
-              title="사이드바 접기"
-              className="p-2.5 rounded-xl transition-all duration-200 flex items-center justify-center flex-1 text-ds-on-surface-variant hover:bg-ds-surface-container-high/50 hover:text-ds-on-surface"
-            >
-              <PanelLeftClose className="w-5 h-5" strokeWidth={2} />
-            </button>
-          )}
         </div>
       </div>
     </aside>
