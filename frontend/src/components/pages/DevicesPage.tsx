@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { formatRelativeTime } from '@/lib/utils'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus, Upload, Download, RefreshCw, Pencil, Trash2, Wifi, Server, CheckCircle, Loader2, AlertTriangle } from 'lucide-react'
+import { Plus, Upload, Download, RefreshCw, Pencil, Trash2, Wifi, Search, XCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -15,20 +15,27 @@ import {
   type Device, type DeviceCreate, type DeviceUpdate,
 } from '@/api/devices'
 import { useSyncStatusWebSocket, type SyncStatusMessage } from '@/hooks/useWebSocket'
-import { formatDate } from '@/lib/utils'
 
 const VENDOR_OPTIONS = [
   { code: 'paloalto', label: 'Palo Alto' },
-  { code: 'ngf', label: 'SECUI NGF' },
-  { code: 'mf2', label: 'SECUI MF2' },
-  { code: 'mock', label: 'Mock' },
+  { code: 'ngf',      label: 'SECUI NGF' },
+  { code: 'mf2',      label: 'SECUI MF2' },
+  { code: 'mock',     label: 'Mock' },
 ]
 
 const VENDOR_BADGE: Record<string, string> = {
-  paloalto: 'bg-orange-100 text-orange-700',
-  ngf:      'bg-blue-100 text-blue-700',
-  mf2:      'bg-indigo-100 text-indigo-700',
-  mock:     'bg-gray-100 text-gray-600',
+  paloalto: 'bg-orange-50 text-orange-600 border border-orange-100',
+  ngf:      'bg-blue-50 text-blue-600 border border-blue-100',
+  mf2:      'bg-cyan-50 text-cyan-600 border border-cyan-100',
+  mock:     'bg-gray-50 text-gray-500 border border-gray-100',
+}
+
+const STATUS_CONFIG: Record<string, { label: string; dot: string; text: string }> = {
+  success:     { label: '완료',   dot: 'bg-emerald-500',              text: 'text-emerald-700' },
+  in_progress: { label: '진행중', dot: 'bg-ds-tertiary animate-pulse', text: 'text-ds-tertiary' },
+  pending:     { label: '대기',   dot: 'bg-ds-outline',                text: 'text-ds-on-surface-variant' },
+  failure:     { label: '실패',   dot: 'bg-ds-error',                  text: 'text-ds-error' },
+  error:       { label: '오류',   dot: 'bg-ds-error',                  text: 'text-ds-error' },
 }
 
 interface DeviceFormData {
@@ -124,14 +131,6 @@ function DeviceFormDialog({ open, onClose, initial, onSubmit, isPending }: {
   )
 }
 
-const SYNC_STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
-  success:     { label: '완료',   classes: 'bg-green-100 text-green-700' },
-  in_progress: { label: '진행중', classes: 'bg-amber-100 text-amber-700' },
-  pending:     { label: '대기중', classes: 'bg-blue-100 text-blue-700' },
-  failure:     { label: '실패',   classes: 'bg-red-100 text-red-700' },
-  error:       { label: '오류',   classes: 'bg-red-100 text-red-700' },
-}
-
 export function DevicesPage() {
   const queryClient = useQueryClient()
   const [quickFilter, setQuickFilter] = useState('')
@@ -157,11 +156,13 @@ export function DevicesPage() {
   }, [devices, quickFilter])
 
   const syncCounts = useMemo(() => ({
-    total: devices.length,
-    synced: devices.filter(d => d.last_sync_status === 'success').length,
+    total:   devices.length,
+    synced:  devices.filter(d => d.last_sync_status === 'success').length,
     syncing: devices.filter(d => d.last_sync_status === 'in_progress' || d.last_sync_status === 'pending').length,
-    error: devices.filter(d => d.last_sync_status === 'failure' || d.last_sync_status === 'error').length,
+    error:   devices.filter(d => d.last_sync_status === 'failure' || d.last_sync_status === 'error').length,
   }), [devices])
+
+  const syncPct = syncCounts.total > 0 ? Math.round(syncCounts.synced / syncCounts.total * 100) : 0
 
   const createMutation = useMutation({
     mutationFn: (data: DeviceCreate) => createDevice(data),
@@ -199,6 +200,7 @@ export function DevicesPage() {
   }, [queryClient])
 
   useSyncStatusWebSocket(handleSyncMessage)
+
   const bulkImportMutation = useMutation({
     mutationFn: (file: File) => bulkImportDevices(file),
     onSuccess: (result) => {
@@ -220,218 +222,225 @@ export function DevicesPage() {
     catch (e: unknown) { toast.error((e as Error).message) }
   }
 
-  const STAT_CARDS = [
-    {
-      label: '전체 장비', value: syncCounts.total, sub: `활성: ${syncCounts.synced}`,
-      icon: Server, iconBg: 'bg-ds-primary-container', iconColor: 'text-ds-on-primary-container',
-      valueColor: 'text-ds-on-surface',
-    },
-    {
-      label: '동기화 완료', value: syncCounts.synced,
-      sub: syncCounts.total > 0 ? `${Math.round(syncCounts.synced / syncCounts.total * 100)}% Fleet Health` : '',
-      icon: CheckCircle, iconBg: 'bg-green-100', iconColor: 'text-green-700',
-      valueColor: 'text-ds-on-surface',
-    },
-    {
-      label: '동기화 중', value: syncCounts.syncing, sub: syncCounts.syncing > 0 ? '진행 중' : '',
-      icon: Loader2, iconBg: 'bg-amber-100', iconColor: 'text-amber-700',
-      valueColor: 'text-ds-on-surface',
-    },
-    {
-      label: '오류', value: syncCounts.error, sub: syncCounts.error > 0 ? 'Critical: 조치 필요' : '',
-      icon: AlertTriangle, iconBg: 'bg-red-100', iconColor: 'text-red-700',
-      valueColor: syncCounts.error > 0 ? 'text-ds-error' : 'text-ds-on-surface',
-    },
-  ]
-
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-6">
       {ConfirmDialogElement}
 
-      {/* Page header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Devices</h1>
-        </div>
+      {/* 헤더 */}
+      <div className="flex items-center justify-between shrink-0">
+        <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Devices</h1>
         <div className="flex items-center gap-2">
           <button
             onClick={() => queryClient.invalidateQueries({ queryKey: ['devices'] })}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-ds-on-surface bg-ds-surface-container-lowest ghost-border rounded-xl ambient-shadow hover:bg-ds-surface-container-low transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-ds-on-surface-variant bg-white rounded-lg shadow-sm border border-ds-outline-variant/10 hover:text-ds-on-surface hover:bg-ds-surface-container-low transition-all"
           >
-            <RefreshCw className="w-4 h-4" />
-            새로고침
+            <RefreshCw className="w-3.5 h-3.5" />
+            갱신
           </button>
           <button
             onClick={() => { setEditTarget(null); setFormOpen(true) }}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold btn-primary-gradient text-ds-on-tertiary rounded-xl ambient-shadow hover:opacity-90 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold btn-primary-gradient text-ds-on-tertiary rounded-lg shadow-sm hover:opacity-90 transition-all"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             장비 추가
           </button>
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        {STAT_CARDS.map((card) => {
-          const Icon = card.icon
-          return (
-            <div key={card.label} className="bg-ds-surface-container-lowest p-6 rounded-xl ambient-shadow ghost-border">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-ds-on-surface-variant font-medium text-sm tracking-wide uppercase">{card.label}</p>
-                  <h3 className={`text-4xl font-extrabold mt-2 font-headline ${card.valueColor}`}>
-                    {isLoading ? '…' : card.value}
-                  </h3>
-                </div>
-                <div className={`p-3 ${card.iconBg} rounded-lg ${card.iconColor}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-              </div>
-              {card.sub && (
-                <div className={`mt-4 text-xs font-semibold ${card.iconColor}`}>{card.sub}</div>
-              )}
+      {/* KPI */}
+      <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">전체 장비</p>
+          <p className="text-2xl font-bold tabular-nums text-ds-on-surface mt-1.5">
+            {isLoading ? '…' : syncCounts.total}
+          </p>
+          <div className="mt-2.5 flex items-center gap-2">
+            <div className="flex-1 h-1 bg-ds-surface-container-high rounded-full overflow-hidden">
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${syncPct}%` }} />
             </div>
-          )
-        })}
+            <span className="text-[10px] font-semibold tabular-nums text-ds-on-surface-variant">{syncPct}%</span>
+          </div>
+          <p className="text-[10px] text-ds-on-surface-variant/60 mt-1">{syncCounts.synced}대 동기화 완료</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">동기화 완료</p>
+          <p className="text-2xl font-bold tabular-nums text-emerald-600 mt-1.5">
+            {isLoading ? '…' : syncCounts.synced}
+          </p>
+          <p className="text-[10px] text-ds-on-surface-variant/60 mt-3">정상 수집 장비</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">동기화 중</p>
+          <p className={`text-2xl font-bold tabular-nums mt-1.5 ${syncCounts.syncing > 0 ? 'text-ds-tertiary' : 'text-ds-on-surface'}`}>
+            {isLoading ? '…' : syncCounts.syncing}
+          </p>
+          <p className="text-[10px] text-ds-on-surface-variant/60 mt-3">
+            {syncCounts.syncing > 0 ? '수집 진행 중' : '진행 없음'}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-ds-outline-variant/8 px-4 py-3.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ds-on-surface-variant/60">오류</p>
+          <p className={`text-2xl font-bold tabular-nums mt-1.5 ${syncCounts.error > 0 ? 'text-ds-error' : 'text-ds-on-surface'}`}>
+            {isLoading ? '…' : syncCounts.error}
+          </p>
+          <p className="text-[10px] text-ds-on-surface-variant/60 mt-3">
+            {syncCounts.error > 0 ? '조치 필요' : '정상'}
+          </p>
+        </div>
       </div>
 
-      {/* Device table */}
-      <div className="bg-ds-surface-container-lowest rounded-xl ambient-shadow ghost-border overflow-hidden">
-        <div className="px-8 py-5 border-b border-ds-outline-variant/10 flex justify-between items-center">
-          <h2 className="text-base font-bold tracking-tight text-ds-on-surface font-headline">등록된 장비</h2>
+      {/* 장비 테이블 */}
+      <div className="bg-white rounded-xl border border-ds-outline-variant/8 shadow-sm flex flex-col overflow-hidden">
+        <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-ds-outline-variant/8">
           <div className="flex items-center gap-3">
-            <input
-              placeholder="장비 검색…"
-              value={quickFilter}
-              onChange={(e) => setQuickFilter(e.target.value)}
-              className="h-8 w-48 text-sm px-3 bg-ds-surface-container-low rounded-md border border-ds-outline-variant/30 focus:outline-none focus:border-ds-tertiary focus:ring-1 focus:ring-ds-tertiary"
-            />
+            <span className="text-[13px] font-semibold text-ds-on-surface">등록된 장비</span>
+            {devices.length > 0 && (
+              <span className="text-[11px] text-ds-on-surface-variant/50 tabular-nums">{devices.length}대</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-ds-surface-container-low rounded-lg px-2.5 py-1.5 border border-ds-outline-variant/10">
+              <Search className="w-3 h-3 text-ds-on-surface-variant shrink-0" />
+              <input
+                value={quickFilter}
+                onChange={(e) => setQuickFilter(e.target.value)}
+                placeholder="장비명, IP 검색"
+                className="text-[12px] bg-transparent outline-none text-ds-on-surface placeholder:text-ds-on-surface-variant/40 w-36"
+              />
+              {quickFilter && (
+                <button onClick={() => setQuickFilter('')}>
+                  <XCircle className="w-3 h-3 text-ds-on-surface-variant hover:text-ds-on-surface" />
+                </button>
+              )}
+            </div>
             <button
               onClick={() => setBulkOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-ds-on-surface ghost-border bg-ds-surface-container-lowest rounded-md hover:bg-ds-surface-container-low transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-ds-on-surface-variant bg-ds-surface-container-low rounded-lg border border-ds-outline-variant/10 hover:text-ds-on-surface transition-colors"
             >
-              <Upload className="w-3.5 h-3.5" />
+              <Upload className="w-3 h-3" />
               대량 등록
             </button>
             <button
               onClick={downloadDeviceTemplate}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-ds-on-surface ghost-border bg-ds-surface-container-lowest rounded-md hover:bg-ds-surface-container-low transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-ds-on-surface-variant bg-ds-surface-container-low rounded-lg border border-ds-outline-variant/10 hover:text-ds-on-surface transition-colors"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3 h-3" />
               템플릿
             </button>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              실시간
+            </div>
           </div>
         </div>
 
         <div className="overflow-x-auto">
           {isLoading ? (
-            <div className="py-16 text-center text-sm text-ds-on-surface-variant">로딩 중…</div>
+            <div className="py-16 text-center text-[13px] text-ds-on-surface-variant">로딩 중…</div>
           ) : filteredDevices.length === 0 ? (
-            <div className="py-16 text-center text-sm text-ds-on-surface-variant">
+            <div className="py-16 text-center text-[13px] text-ds-on-surface-variant">
               {quickFilter ? '검색 결과가 없습니다.' : '등록된 장비가 없습니다.'}
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
-              <thead className="bg-ds-surface-container-low/50">
-                <tr>
-                  <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">장비명</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">IP 주소</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">벤더</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">모델</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">그룹</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">HA Peer IP</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">수집 옵션</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">동기화 상태</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary">마지막 동기화</th>
-                  <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-ds-primary text-right">작업</th>
+              <thead>
+                <tr className="border-b border-ds-outline-variant/8 bg-ds-surface-container-low/30">
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">상태</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">장비명</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">벤더</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">모델</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">그룹</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">HA Peer IP</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">수집 옵션</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60">마지막 동기화</th>
+                  <th className="px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-ds-on-surface-variant/60 text-right">작업</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-ds-outline-variant/10">
+              <tbody className="divide-y divide-ds-outline-variant/8">
                 {filteredDevices.map((device) => {
-                  const statusConf = SYNC_STATUS_CONFIG[device.last_sync_status ?? '']
+                  const conf = STATUS_CONFIG[device.last_sync_status ?? '']
+                  const isError = device.last_sync_status === 'failure' || device.last_sync_status === 'error'
                   return (
                     <tr
                       key={device.id}
                       className={`hover:bg-ds-surface-container-low/30 transition-colors border-l-2 ${
-                        device.last_sync_status === 'failure' || device.last_sync_status === 'error'
-                          ? 'border-l-ds-error bg-red-50/20'
-                          : 'border-l-transparent'
+                        isError ? 'border-l-ds-error bg-red-50/20' : 'border-l-transparent'
                       }`}
                     >
-                      <td className="px-8 py-5">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-ds-on-surface text-sm">{device.name}</span>
-                          {device.description && (
-                            <span className="text-xs text-ds-on-surface-variant mt-0.5">{device.description}</span>
-                          )}
+                      <td className="px-5 py-3">
+                        {conf ? (
+                          <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${conf.text}`} title={device.last_sync_step ?? ''}>
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${conf.dot}`} />
+                            {conf.label}
+                          </span>
+                        ) : (
+                          <span className="text-ds-on-surface-variant/40 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-[12px] font-semibold text-ds-on-surface">{device.name}</span>
+                          <span className="text-[10px] text-ds-on-surface-variant/60 font-mono mt-0.5">{device.ip_address}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-5 font-mono text-sm text-ds-on-surface">{device.ip_address}</td>
-                      <td className="px-6 py-5">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${VENDOR_BADGE[device.vendor?.toLowerCase()] ?? 'bg-gray-100 text-gray-600'}`}>
+                      <td className="px-5 py-3">
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${VENDOR_BADGE[device.vendor?.toLowerCase()] ?? 'bg-gray-50 text-gray-500 border border-gray-100'}`}>
                           {VENDOR_OPTIONS.find(v => v.code === device.vendor)?.label ?? device.vendor}
                         </span>
                       </td>
-                      <td className="px-6 py-5 text-sm text-ds-on-surface-variant">{device.model ?? '-'}</td>
-                      <td className="px-6 py-5">
+                      <td className="px-5 py-3 text-[12px] text-ds-on-surface-variant">{device.model ?? '—'}</td>
+                      <td className="px-5 py-3">
                         {device.group ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-ds-tertiary/10 text-ds-tertiary">{device.group}</span>
-                        ) : <span className="text-xs text-ds-on-surface-variant">-</span>}
+                          <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-ds-tertiary/10 text-ds-tertiary">{device.group}</span>
+                        ) : <span className="text-[12px] text-ds-on-surface-variant/40">—</span>}
                       </td>
-                      <td className="px-6 py-5 font-mono text-xs text-ds-on-surface-variant">{device.ha_peer_ip ?? '-'}</td>
-                      <td className="px-6 py-5">
+                      <td className="px-5 py-3 font-mono text-[11px] text-ds-on-surface-variant">{device.ha_peer_ip ?? '—'}</td>
+                      <td className="px-5 py-3">
                         <div className="flex gap-1 flex-wrap">
                           {device.collect_last_hit_date && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-50 text-green-700">히트수집</span>
+                            <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">히트수집</span>
                           )}
                           {device.use_ssh_for_last_hit_date && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700">SSH</span>
+                            <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-100">SSH</span>
                           )}
                           {!device.collect_last_hit_date && !device.use_ssh_for_last_hit_date && (
-                            <span className="text-xs text-ds-on-surface-variant">-</span>
+                            <span className="text-[12px] text-ds-on-surface-variant/40">—</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-5">
-                        {statusConf ? (
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tight ${statusConf.classes}`}>
-                            {statusConf.label}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-ds-on-surface-variant">-</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-5 text-sm text-ds-on-surface-variant">{formatRelativeTime(device.last_sync_at)}</td>
-                      <td className="px-8 py-5 text-right">
-                        <div className="flex justify-end gap-1">
+                      <td className="px-5 py-3 text-[12px] text-ds-on-surface-variant">{formatRelativeTime(device.last_sync_at)}</td>
+                      <td className="px-5 py-3 text-right">
+                        <div className="flex justify-end gap-0.5">
                           <button
                             onClick={() => { setEditTarget(device); setFormOpen(true) }}
-                            className="p-2 hover:bg-ds-surface-container-high rounded-lg text-ds-primary transition-colors"
+                            className="p-1.5 hover:bg-ds-surface-container-high rounded-lg text-ds-on-surface-variant hover:text-ds-primary transition-colors"
                             title="수정"
                           >
-                            <Pencil className="w-4 h-4" />
+                            <Pencil className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => syncMutation.mutate(device.id)}
-                            className="p-2 hover:bg-ds-surface-container-high rounded-lg text-ds-primary transition-colors"
+                            className="p-1.5 hover:bg-ds-surface-container-high rounded-lg text-ds-on-surface-variant hover:text-ds-primary transition-colors"
                             title="동기화"
                           >
-                            <RefreshCw className="w-4 h-4" />
+                            <RefreshCw className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleTestConnection(device)}
-                            className="p-2 hover:bg-ds-surface-container-high rounded-lg text-ds-primary transition-colors"
+                            className="p-1.5 hover:bg-ds-surface-container-high rounded-lg text-ds-on-surface-variant hover:text-ds-primary transition-colors"
                             title="연결 테스트"
                           >
-                            <Wifi className="w-4 h-4" />
+                            <Wifi className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDelete(device)}
-                            className="p-2 hover:bg-red-50 rounded-lg text-ds-error transition-colors"
+                            className="p-1.5 hover:bg-red-50 rounded-lg text-ds-on-surface-variant hover:text-ds-error transition-colors"
                             title="삭제"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
@@ -443,8 +452,8 @@ export function DevicesPage() {
           )}
         </div>
 
-        <div className="px-8 py-4 bg-ds-surface-container-low/30 border-t border-ds-outline-variant/10">
-          <span className="text-xs text-ds-on-surface-variant">
+        <div className="shrink-0 px-5 py-2.5 border-t border-ds-outline-variant/8 bg-ds-surface-container-low/20">
+          <span className="text-[11px] text-ds-on-surface-variant/60">
             {quickFilter
               ? `${filteredDevices.length}개 표시 (전체 ${devices.length}개 중)`
               : `총 ${devices.length}개 장비`}
@@ -452,7 +461,7 @@ export function DevicesPage() {
         </div>
       </div>
 
-      {/* Device form dialog */}
+      {/* 장비 폼 다이얼로그 */}
       <DeviceFormDialog
         open={formOpen}
         onClose={() => { setFormOpen(false); setEditTarget(null) }}
@@ -476,7 +485,7 @@ export function DevicesPage() {
         isPending={createMutation.isPending || updateMutation.isPending}
       />
 
-      {/* Bulk import dialog */}
+      {/* 대량 등록 다이얼로그 */}
       <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
         <DialogContent className="bg-ds-surface-container-lowest">
           <DialogHeader>
