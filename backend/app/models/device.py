@@ -42,3 +42,12 @@ class Device(Base):
     last_sync_at = Column(DateTime, nullable=True)
     last_sync_status = Column(String, nullable=True)  # e.g., in_progress, success, failure
     last_sync_step = Column(String, nullable=True)   # e.g., collecting policies, indexing, etc.
+
+    # 대시보드 통계 캐시 — 동기화 완료 시 업데이트됩니다.
+    cached_policies = Column(Integer, nullable=True, default=0)
+    cached_active_policies = Column(Integer, nullable=True, default=0)
+    cached_disabled_policies = Column(Integer, nullable=True, default=0)
+    cached_network_objects = Column(Integer, nullable=True, default=0)
+    cached_network_groups = Column(Integer, nullable=True, default=0)
+    cached_services = Column(Integer, nullable=True, default=0)
+    cached_service_groups = Column(Integer, nullable=True, default=0)

@@ -602,6 +602,7 @@ async def run_sync_all_orchestrator(device_id: int) -> None:
                     device_to_update = await crud.device.get_device(db=db, device_id=device_id)
                     if device_to_update:
                         await crud.device.update_sync_status(db=db, device=device_to_update, status="success")
+                        await crud.device.update_device_stats_cache(db=db, device_id=device_id)
                         await db.commit()
 
             logging.info(f"[orchestrator] sync-all finished successfully for device_id={device_id}")

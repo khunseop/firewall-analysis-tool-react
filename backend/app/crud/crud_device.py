@@ -128,155 +128,51 @@ async def update_sync_status(
 
 
 async def get_dashboard_stats(db: AsyncSession) -> DashboardStatsResponse:
-    """
-    대시보드 메인 화면에 표시될 종합 통계 데이터를 조회합니다.
-    전체 장비 수, 활성 정책 수, 객체 수 및 각 장비별 상세 현황을 포함합니다.
-    """
-    # 모든 장비 정보 조회
+    """캐시 컬럼에서 읽어 대시보드 통계를 즉시 반환합니다."""
     devices_result = await db.execute(select(Device))
     devices = devices_result.scalars().all()
-    
+
     if not devices:
         return DashboardStatsResponse(
-            total_devices=0,
-            active_devices=0,
-            total_policies=0,
-            total_active_policies=0,
-            total_disabled_policies=0,
-            total_network_objects=0,
-            total_network_groups=0,
-            total_services=0,
-            total_service_groups=0,
+            total_devices=0, active_devices=0,
+            total_policies=0, total_active_policies=0, total_disabled_policies=0,
+            total_network_objects=0, total_network_groups=0,
+            total_services=0, total_service_groups=0,
             device_stats=[]
         )
-    
-    device_ids = [d.id for d in devices]
-    
-    # 각 장비별 정책 통계 (집계 쿼리)
-    policy_stats = {}
-    for device_id in device_ids:
-        total_result = await db.execute(
-            select(func.count(Policy.id)).where(
-                Policy.device_id == device_id,
-                Policy.is_active == True
-            )
-        )
-        total = total_result.scalar() or 0
-        
-        active_result = await db.execute(
-            select(func.count(Policy.id)).where(
-                Policy.device_id == device_id,
-                Policy.is_active == True,
-                Policy.enable == True
-            )
-        )
-        active = active_result.scalar() or 0
-        
-        disabled_result = await db.execute(
-            select(func.count(Policy.id)).where(
-                Policy.device_id == device_id,
-                Policy.is_active == True,
-                Policy.enable == False
-            )
-        )
-        disabled = disabled_result.scalar() or 0
-        
-        policy_stats[device_id] = {
-            'total': total,
-            'active': active,
-            'disabled': disabled
-        }
-    
-    # 각 장비별 네트워크 객체 통계
-    network_object_stats = {}
-    for device_id in device_ids:
-        net_obj_result = await db.execute(
-            select(func.count(NetworkObject.id)).where(
-                NetworkObject.device_id == device_id,
-                NetworkObject.is_active == True
-            )
-        )
-        net_obj_count = net_obj_result.scalar() or 0
-        
-        net_group_result = await db.execute(
-            select(func.count(NetworkGroup.id)).where(
-                NetworkGroup.device_id == device_id,
-                NetworkGroup.is_active == True
-            )
-        )
-        net_group_count = net_group_result.scalar() or 0
-        
-        network_object_stats[device_id] = {
-            'objects': net_obj_count,
-            'groups': net_group_count,
-        }
-    
-    # 각 장비별 서비스 객체 통계
-    service_stats = {}
-    for device_id in device_ids:
-        svc_result = await db.execute(
-            select(func.count(Service.id)).where(
-                Service.device_id == device_id,
-                Service.is_active == True
-            )
-        )
-        svc_count = svc_result.scalar() or 0
-        
-        svc_group_result = await db.execute(
-            select(func.count(ServiceGroup.id)).where(
-                ServiceGroup.device_id == device_id,
-                ServiceGroup.is_active == True
-            )
-        )
-        svc_group_count = svc_group_result.scalar() or 0
 
-        service_stats[device_id] = {
-            'services': svc_count,
-            'groups': svc_group_count,
-        }
-    
-    # 장비별 통계 데이터 구성
     device_stats_list: List[DeviceStats] = []
-    total_policies = 0
-    total_active_policies = 0
-    total_disabled_policies = 0
-    total_network_objects = 0
-    total_network_groups = 0
-    total_services = 0
-    total_service_groups = 0
-    active_devices = 0
+    total_policies = total_active_policies = total_disabled_policies = 0
+    total_network_objects = total_network_groups = 0
+    total_services = total_service_groups = active_devices = 0
 
-    for device in devices:
-        policy_data = policy_stats.get(device.id, {'total': 0, 'active': 0, 'disabled': 0})
-        net_data = network_object_stats.get(device.id, {'objects': 0, 'groups': 0})
-        svc_data = service_stats.get(device.id, {'services': 0, 'groups': 0})
+    for d in devices:
+        p  = d.cached_policies or 0
+        pa = d.cached_active_policies or 0
+        pd = d.cached_disabled_policies or 0
+        no = d.cached_network_objects or 0
+        ng = d.cached_network_groups or 0
+        sv = d.cached_services or 0
+        sg = d.cached_service_groups or 0
 
-        total_policies += policy_data['total']
-        total_active_policies += policy_data['active']
-        total_disabled_policies += policy_data['disabled']
-        total_network_objects += net_data['objects']
-        total_network_groups += net_data['groups']
-        total_services += svc_data['services']
-        total_service_groups += svc_data['groups']
-
-        if device.last_sync_status == 'success':
+        total_policies          += p
+        total_active_policies   += pa
+        total_disabled_policies += pd
+        total_network_objects   += no
+        total_network_groups    += ng
+        total_services          += sv
+        total_service_groups    += sg
+        if d.last_sync_status == 'success':
             active_devices += 1
 
         device_stats_list.append(DeviceStats(
-            id=device.id,
-            name=device.name,
-            vendor=device.vendor,
-            ip_address=device.ip_address,
-            policies=policy_data['total'],
-            active_policies=policy_data['active'],
-            disabled_policies=policy_data['disabled'],
-            network_objects=net_data['objects'],
-            network_groups=net_data['groups'],
-            services=svc_data['services'],
-            service_groups=svc_data['groups'],
-            sync_status=device.last_sync_status,
-            sync_step=device.last_sync_step,
-            sync_time=device.last_sync_at
+            id=d.id, name=d.name, vendor=d.vendor, ip_address=d.ip_address,
+            policies=p, active_policies=pa, disabled_policies=pd,
+            network_objects=no, network_groups=ng,
+            services=sv, service_groups=sg,
+            sync_status=d.last_sync_status,
+            sync_step=d.last_sync_step,
+            sync_time=d.last_sync_at,
         ))
 
     return DashboardStatsResponse(
@@ -289,5 +185,49 @@ async def get_dashboard_stats(db: AsyncSession) -> DashboardStatsResponse:
         total_network_groups=total_network_groups,
         total_services=total_services,
         total_service_groups=total_service_groups,
-        device_stats=device_stats_list
+        device_stats=device_stats_list,
     )
+
+
+async def update_device_stats_cache(db: AsyncSession, device_id: int) -> None:
+    """동기화 완료 후 단일 장비의 통계를 GROUP BY 쿼리로 계산해 캐시 컬럼에 저장합니다."""
+    # 정책 통계 — 3개 값을 단일 쿼리로
+    from sqlalchemy import case
+    policy_row = (await db.execute(
+        select(
+            func.count(Policy.id).label("total"),
+            func.sum(case((Policy.enable == True,  1), else_=0)).label("active"),
+            func.sum(case((Policy.enable == False, 1), else_=0)).label("disabled"),
+        ).where(Policy.device_id == device_id, Policy.is_active == True)
+    )).one()
+
+    net_obj_count  = (await db.execute(
+        select(func.count(NetworkObject.id))
+        .where(NetworkObject.device_id == device_id, NetworkObject.is_active == True)
+    )).scalar() or 0
+
+    net_grp_count  = (await db.execute(
+        select(func.count(NetworkGroup.id))
+        .where(NetworkGroup.device_id == device_id, NetworkGroup.is_active == True)
+    )).scalar() or 0
+
+    svc_count = (await db.execute(
+        select(func.count(Service.id))
+        .where(Service.device_id == device_id, Service.is_active == True)
+    )).scalar() or 0
+
+    svc_grp_count  = (await db.execute(
+        select(func.count(ServiceGroup.id))
+        .where(ServiceGroup.device_id == device_id, ServiceGroup.is_active == True)
+    )).scalar() or 0
+
+    device = await get_device(db, device_id)
+    if device:
+        device.cached_policies          = policy_row.total    or 0
+        device.cached_active_policies   = policy_row.active   or 0
+        device.cached_disabled_policies = policy_row.disabled or 0
+        device.cached_network_objects   = net_obj_count
+        device.cached_network_groups    = net_grp_count
+        device.cached_services          = svc_count
+        device.cached_service_groups    = svc_grp_count
+        db.add(device)
