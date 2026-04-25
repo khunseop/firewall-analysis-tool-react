@@ -133,6 +133,84 @@ function DeviceFormDialog({ open, onClose, initial, onSubmit, isPending }: {
   )
 }
 
+const COLUMN_DEFS: ColDef<Device>[] = [
+  {
+    checkboxSelection: true,
+    headerCheckboxSelection: true,
+    width: 44, minWidth: 44, maxWidth: 44,
+    pinned: 'left', sortable: false, filter: false, resizable: false,
+  },
+  {
+    headerName: '상태', width: 90, minWidth: 90, maxWidth: 90, pinned: 'left',
+    filter: 'agTextColumnFilter', resizable: false,
+    valueGetter: (p) => STATUS_CONFIG[p.data?.last_sync_status ?? '']?.label ?? '',
+    cellRenderer: (p: { data: Device }) => {
+      const conf = STATUS_CONFIG[p.data?.last_sync_status ?? '']
+      return conf
+        ? <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${conf.text}`} title={p.data?.last_sync_step ?? ''}>
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${conf.dot}`} />
+            {conf.label}
+          </span>
+        : <span className="text-ds-on-surface-variant/40 text-xs">—</span>
+    },
+  },
+  {
+    headerName: '장비명', width: 200, minWidth: 200,
+    filter: 'agTextColumnFilter',
+    valueGetter: (p) => `${p.data?.name ?? ''} ${p.data?.ip_address ?? ''}`,
+    cellRenderer: (p: { data: Device }) => (
+      <div className="flex flex-col leading-tight">
+        <span className="text-[12px] font-semibold text-ds-on-surface">{p.data?.name}</span>
+        <span className="text-[10px] text-ds-on-surface-variant/60 font-mono mt-0.5">{p.data?.ip_address}</span>
+      </div>
+    ),
+  },
+  {
+    field: 'vendor', headerName: '벤더', width: 100, minWidth: 100, maxWidth: 100,
+    filter: 'agTextColumnFilter', resizable: false,
+    valueGetter: (p) => VENDOR_OPTIONS.find(v => v.code === p.data?.vendor)?.label ?? p.data?.vendor ?? '',
+    cellRenderer: (p: { data: Device }) => (
+      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${VENDOR_BADGE[p.data?.vendor?.toLowerCase() ?? ''] ?? 'bg-gray-50 text-gray-500 border border-gray-100'}`}>
+        {VENDOR_OPTIONS.find(v => v.code === p.data?.vendor)?.label ?? p.data?.vendor}
+      </span>
+    ),
+  },
+  {
+    field: 'model', headerName: '모델', width: 120, minWidth: 120,
+    filter: 'agTextColumnFilter',
+    cellRenderer: (p: { value: string }) => <span className="text-[12px] text-ds-on-surface-variant">{p.value ?? '—'}</span>,
+  },
+  {
+    field: 'group', headerName: '그룹', width: 100, minWidth: 100,
+    filter: 'agTextColumnFilter',
+    cellRenderer: (p: { value: string }) => p.value
+      ? <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-ds-tertiary/10 text-ds-tertiary">{p.value}</span>
+      : <span className="text-[12px] text-ds-on-surface-variant/40">—</span>,
+  },
+  {
+    field: 'ha_peer_ip', headerName: 'HA Peer IP', width: 130, minWidth: 130,
+    filter: 'agTextColumnFilter',
+    cellRenderer: (p: { value: string }) => <span className="font-mono text-[11px] text-ds-on-surface-variant">{p.value ?? '—'}</span>,
+  },
+  {
+    headerName: '수집 옵션', width: 110, minWidth: 110, maxWidth: 110,
+    sortable: false, filter: false, resizable: false,
+    cellRenderer: (p: { data: Device }) => (
+      <div className="flex gap-1 flex-wrap items-center">
+        {p.data?.collect_last_hit_date && <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">히트수집</span>}
+        {p.data?.use_ssh_for_last_hit_date && <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-100">SSH</span>}
+        {!p.data?.collect_last_hit_date && !p.data?.use_ssh_for_last_hit_date && <span className="text-[12px] text-ds-on-surface-variant/40">—</span>}
+      </div>
+    ),
+  },
+  {
+    headerName: '마지막 동기화', width: 130, minWidth: 130, maxWidth: 130,
+    filter: 'agTextColumnFilter', resizable: false,
+    valueGetter: (p) => formatRelativeTime(p.data?.last_sync_at ?? null),
+    cellRenderer: (p: { value: string }) => <span className="text-[12px] text-ds-on-surface-variant">{p.value}</span>,
+  },
+]
+
 export function DevicesPage() {
   const queryClient = useQueryClient()
   const [quickFilter, setQuickFilter] = useState('')
@@ -140,7 +218,7 @@ export function DevicesPage() {
   const [editTarget, setEditTarget] = useState<Device | null>(null)
   const [bulkOpen, setBulkOpen] = useState(false)
   const [bulkFile, setBulkFile] = useState<File | null>(null)
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [selectedDevices, setSelectedDevices] = useState<Device[]>([])
   const { confirm, ConfirmDialogElement } = useConfirm()
 
   const { data: devices = [], isLoading } = useQuery({ queryKey: ['devices'], queryFn: listDevices })
@@ -201,113 +279,44 @@ export function DevicesPage() {
     onError: (e: Error) => toast.error(e.message),
   })
 
-  const handleDelete = async (device: Device) => {
-    const ok = await confirm({ title: '장비 삭제', description: `'${device.name}'을(를) 삭제하시겠습니까?`, variant: 'destructive', confirmLabel: '삭제' })
-    if (ok) deleteMutation.mutate(device.id)
-  }
-
-  const handleTestConnection = useCallback(async (device: Device) => {
-    toast.info(`'${device.name}' 연결 테스트 중…`)
-    try { toast.success((await testConnection(device.id)).message) }
-    catch (e: unknown) { toast.error((e as Error).message) }
-  }, [])
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedDevices.length === 0) return
+    const names = selectedDevices.map(d => d.name).join(', ')
+    const ok = await confirm({
+      title: '장비 삭제',
+      description: `${selectedDevices.length}개 장비를 삭제하시겠습니까?\n(${names})`,
+      variant: 'destructive',
+      confirmLabel: '삭제',
+    })
+    if (ok) {
+      for (const d of selectedDevices) deleteMutation.mutate(d.id)
+      setSelectedDevices([])
+    }
+  }, [selectedDevices, confirm, deleteMutation])
 
   const handleBulkSync = useCallback(() => {
-    if (selectedIds.length === 0) return
-    selectedIds.forEach(id => syncMutation.mutate(id))
-    toast.info(`${selectedIds.length}개 장비 동기화를 시작합니다.`)
-  }, [selectedIds, syncMutation])
+    if (selectedDevices.length === 0) return
+    selectedDevices.forEach(d => syncMutation.mutate(d.id))
+    toast.info(`${selectedDevices.length}개 장비 동기화를 시작합니다.`)
+  }, [selectedDevices, syncMutation])
 
-  const columnDefs = useMemo((): ColDef<Device>[] => [
-    {
-      checkboxSelection: true,
-      headerCheckboxSelection: true,
-      width: 44, minWidth: 44, maxWidth: 44,
-      pinned: 'left', sortable: false, filter: false, resizable: false,
-    },
-    {
-      headerName: '상태', width: 90, pinned: 'left',
-      filter: 'agTextColumnFilter',
-      valueGetter: (p) => STATUS_CONFIG[p.data?.last_sync_status ?? '']?.label ?? '',
-      cellRenderer: (p: { data: Device }) => {
-        const conf = STATUS_CONFIG[p.data?.last_sync_status ?? '']
-        return conf
-          ? <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${conf.text}`} title={p.data?.last_sync_step ?? ''}>
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${conf.dot}`} />
-              {conf.label}
-            </span>
-          : <span className="text-ds-on-surface-variant/40 text-xs">—</span>
-      },
-    },
-    {
-      headerName: '장비명', width: 200, filter: 'agTextColumnFilter',
-      valueGetter: (p) => `${p.data?.name ?? ''} ${p.data?.ip_address ?? ''}`,
-      cellRenderer: (p: { data: Device }) => (
-        <div className="flex flex-col leading-tight">
-          <span className="text-[12px] font-semibold text-ds-on-surface">{p.data?.name}</span>
-          <span className="text-[10px] text-ds-on-surface-variant/60 font-mono mt-0.5">{p.data?.ip_address}</span>
-        </div>
-      ),
-    },
-    {
-      field: 'vendor', headerName: '벤더', width: 110, filter: 'agTextColumnFilter',
-      valueGetter: (p) => VENDOR_OPTIONS.find(v => v.code === p.data?.vendor)?.label ?? p.data?.vendor ?? '',
-      cellRenderer: (p: { data: Device }) => (
-        <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${VENDOR_BADGE[p.data?.vendor?.toLowerCase() ?? ''] ?? 'bg-gray-50 text-gray-500 border border-gray-100'}`}>
-          {VENDOR_OPTIONS.find(v => v.code === p.data?.vendor)?.label ?? p.data?.vendor}
-        </span>
-      ),
-    },
-    {
-      field: 'model', headerName: '모델', width: 100, filter: 'agTextColumnFilter',
-      cellRenderer: (p: { value: string }) => <span className="text-[12px] text-ds-on-surface-variant">{p.value ?? '—'}</span>,
-    },
-    {
-      field: 'group', headerName: '그룹', width: 100, filter: 'agTextColumnFilter',
-      cellRenderer: (p: { value: string }) => p.value
-        ? <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-ds-tertiary/10 text-ds-tertiary">{p.value}</span>
-        : <span className="text-[12px] text-ds-on-surface-variant/40">—</span>,
-    },
-    {
-      field: 'ha_peer_ip', headerName: 'HA Peer IP', width: 130, filter: 'agTextColumnFilter',
-      cellRenderer: (p: { value: string }) => <span className="font-mono text-[11px] text-ds-on-surface-variant">{p.value ?? '—'}</span>,
-    },
-    {
-      headerName: '수집 옵션', width: 110, sortable: false, filter: false,
-      cellRenderer: (p: { data: Device }) => (
-        <div className="flex gap-1 flex-wrap items-center">
-          {p.data?.collect_last_hit_date && <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">히트수집</span>}
-          {p.data?.use_ssh_for_last_hit_date && <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-100">SSH</span>}
-          {!p.data?.collect_last_hit_date && !p.data?.use_ssh_for_last_hit_date && <span className="text-[12px] text-ds-on-surface-variant/40">—</span>}
-        </div>
-      ),
-    },
-    {
-      headerName: '마지막 동기화', width: 130, filter: 'agTextColumnFilter',
-      valueGetter: (p) => formatRelativeTime(p.data?.last_sync_at ?? null),
-      cellRenderer: (p: { value: string }) => <span className="text-[12px] text-ds-on-surface-variant">{p.value}</span>,
-    },
-    {
-      headerName: '작업', width: 124, minWidth: 124, maxWidth: 124,
-      sortable: false, filter: false, resizable: false, pinned: 'right',
-      cellRenderer: (p: { data: Device }) => (
-        <div className="flex justify-end gap-0.5">
-          <button onClick={() => { setEditTarget(p.data); setFormOpen(true) }} className="p-1.5 hover:bg-ds-surface-container-high rounded-lg text-ds-on-surface-variant hover:text-ds-primary transition-colors" title="수정">
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => syncMutation.mutate(p.data?.id)} className="p-1.5 hover:bg-ds-surface-container-high rounded-lg text-ds-on-surface-variant hover:text-ds-primary transition-colors" title="동기화">
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => handleTestConnection(p.data)} className="p-1.5 hover:bg-ds-surface-container-high rounded-lg text-ds-on-surface-variant hover:text-ds-primary transition-colors" title="연결 테스트">
-            <Wifi className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => handleDelete(p.data)} className="p-1.5 hover:bg-red-50 rounded-lg text-ds-on-surface-variant hover:text-ds-error transition-colors" title="삭제">
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      ),
-    },
-  ], [handleDelete, handleTestConnection, setEditTarget, setFormOpen, syncMutation])
+  const handleBulkTestConnection = useCallback(async () => {
+    if (selectedDevices.length === 0) return
+    toast.info(`${selectedDevices.length}개 장비 연결 테스트 중…`)
+    for (const d of selectedDevices) {
+      try { toast.success(`[${d.name}] ${(await testConnection(d.id)).message}`) }
+      catch (e: unknown) { toast.error(`[${d.name}] ${(e as Error).message}`) }
+    }
+  }, [selectedDevices])
+
+  const handleEdit = useCallback(() => {
+    if (selectedDevices.length !== 1) return
+    setEditTarget(selectedDevices[0])
+    setFormOpen(true)
+  }, [selectedDevices])
+
+  const sel = selectedDevices.length
+  const isSingle = sel === 1
 
   return (
     <div className="flex flex-col gap-6">
@@ -381,26 +390,62 @@ export function DevicesPage() {
 
       {/* 장비 테이블 */}
       <div className="card rounded-xl flex flex-col overflow-hidden">
-        <div className="shrink-0 flex items-center justify-between px-5 py-3">
-          <div className="flex items-center gap-3">
-            <span className="text-[13px] font-semibold text-ds-on-surface">등록된 장비</span>
+        <div className="shrink-0 flex items-center justify-between px-5 py-3 gap-3">
+          {/* 좌측: 제목 + 선택 현황 + 일괄 작업 버튼 */}
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[13px] font-semibold text-ds-on-surface shrink-0">등록된 장비</span>
             {devices.length > 0 && (
-              <span className="text-[11px] text-ds-on-surface-variant/50 tabular-nums">{devices.length}대</span>
+              <span className="text-[11px] text-ds-on-surface-variant/50 tabular-nums shrink-0">{devices.length}대</span>
             )}
-            {selectedIds.length > 0 && (
-              <span className="text-[11px] font-semibold text-ds-tertiary tabular-nums">{selectedIds.length}개 선택</span>
+
+            {sel > 0 && (
+              <>
+                <span className="w-px h-4 bg-ds-outline-variant/30 shrink-0" />
+                <span className="text-[11px] font-semibold text-ds-tertiary tabular-nums shrink-0">{sel}개 선택</span>
+
+                {/* 편집 — 단일 선택만 */}
+                <button
+                  onClick={handleEdit}
+                  disabled={!isSingle}
+                  title={isSingle ? '수정' : '단일 장비만 수정 가능'}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-outline-variant/20 bg-ds-surface-container-low text-ds-on-surface-variant hover:text-ds-primary hover:bg-ds-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Pencil className="w-3 h-3" />
+                  수정
+                </button>
+
+                {/* 동기화 */}
+                <button
+                  onClick={handleBulkSync}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-outline-variant/20 bg-ds-surface-container-low text-ds-on-surface-variant hover:text-ds-primary hover:bg-ds-surface-container-high transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  동기화
+                </button>
+
+                {/* 연결 테스트 */}
+                <button
+                  onClick={handleBulkTestConnection}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-outline-variant/20 bg-ds-surface-container-low text-ds-on-surface-variant hover:text-ds-primary hover:bg-ds-surface-container-high transition-colors"
+                >
+                  <Wifi className="w-3 h-3" />
+                  연결 테스트
+                </button>
+
+                {/* 삭제 */}
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-error/20 bg-ds-error/5 text-ds-error hover:bg-ds-error/10 transition-colors"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  삭제
+                </button>
+              </>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {selectedIds.length > 0 && (
-              <button
-                onClick={handleBulkSync}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold btn-primary-gradient text-ds-on-tertiary rounded-lg hover:opacity-90 transition-all"
-              >
-                <RefreshCw className="w-3 h-3" />
-                선택 동기화 ({selectedIds.length})
-              </button>
-            )}
+
+          {/* 우측: 검색 + 유틸 */}
+          <div className="flex items-center gap-2 shrink-0">
             <div className="flex items-center gap-1.5 bg-ds-surface-container-low rounded-lg px-2.5 py-1.5 border border-ds-outline-variant/10">
               <Search className="w-3 h-3 text-ds-on-surface-variant shrink-0" />
               <input
@@ -437,21 +482,20 @@ export function DevicesPage() {
         </div>
 
         <AgGridWrapper<Device>
-          columnDefs={columnDefs}
+          columnDefs={COLUMN_DEFS}
           rowData={devices}
           getRowId={(p) => String(p.data.id)}
           quickFilterText={quickFilter}
           height="calc(100vh - 380px)"
           noRowsText="등록된 장비가 없습니다."
           rowSelection="multiple"
-          onSelectionChanged={(rows) => setSelectedIds(rows.map(r => r.id))}
+          onSelectionChanged={(rows) => setSelectedDevices(rows)}
           getRowStyle={(p) => {
             const s = p.data?.last_sync_status
             return (s === 'failure' || s === 'error')
               ? { borderLeft: '2px solid #9f403d', backgroundColor: 'rgba(254, 226, 226, 0.12)' }
               : { borderLeft: '2px solid transparent' }
           }}
-          fitColumns
         />
       </div>
 
