@@ -182,7 +182,7 @@ body {
 </button>
 ```
 
-### 서브 버튼 (대량 등록, 템플릿 등)
+### 서브 버튼 (일괄 등록, 템플릿 등)
 ```tsx
 <button className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-ds-on-surface-variant bg-ds-surface-container-low rounded-lg border border-ds-outline-variant/10 hover:text-ds-on-surface transition-colors">
   <Icon className="w-3 h-3" />

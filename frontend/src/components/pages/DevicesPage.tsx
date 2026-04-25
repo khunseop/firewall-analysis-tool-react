@@ -420,7 +420,7 @@ export function DevicesPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-ds-on-surface-variant bg-ds-surface-container-low rounded-lg border border-ds-outline-variant/10 hover:text-ds-on-surface transition-colors"
             >
               <Upload className="w-3 h-3" />
-              대량 등록
+              일괄 등록
             </button>
             <button
               onClick={downloadDeviceTemplate}
@@ -479,11 +479,11 @@ export function DevicesPage() {
         isPending={createMutation.isPending || updateMutation.isPending}
       />
 
-      {/* 대량 등록 다이얼로그 */}
+      {/* 일괄 등록 다이얼로그 */}
       <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
         <DialogContent className="bg-ds-surface-container-lowest">
           <DialogHeader>
-            <DialogTitle className="font-headline text-ds-on-surface">장비 대량 등록</DialogTitle>
+            <DialogTitle className="font-headline text-ds-on-surface">장비 일괄 등록</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <p className="text-sm text-ds-on-surface-variant">Excel 파일을 업로드하여 여러 장비를 한번에 등록합니다.</p>
