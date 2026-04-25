@@ -117,7 +117,7 @@
 .ag-theme-quartz {
   --ag-background-color: transparent;
   --ag-odd-row-background-color: transparent;
-  --ag-header-background-color: rgba(240, 244, 247, 0.3);
+  --ag-header-background-color: rgba(235, 240, 245, 0.7);
   --ag-header-foreground-color: rgba(86, 97, 102, 0.6);
   --ag-row-hover-color: rgba(240, 244, 247, 0.3);
   --ag-border-color: transparent;
@@ -130,7 +130,7 @@
   --ag-font-family: 'Inter', sans-serif;
   --ag-font-size: 12px;
   --ag-row-height: 44px;
-  --ag-header-height: 40px;
+  --ag-header-height: 32px;
   --ag-cell-horizontal-padding: 20px;
   --ag-wrapper-border-radius: 0;
   --ag-grid-size: 4px;
@@ -145,7 +145,8 @@
   box-shadow: none !important;
 }
 .ag-theme-quartz .ag-header {
-  border-bottom: 1px solid rgba(169, 180, 185, 0.08) !important;
+  border-top: none !important;
+  border-bottom: 1px solid rgba(169, 180, 185, 0.12) !important;
 }
 
 /* Table-like header */
@@ -203,9 +204,10 @@
   color: #3b82f6 !important;
 }
 
-/* Pinned column separator */
-.ag-theme-quartz .ag-pinned-left-cols-container {
-  border-right: 2px solid rgba(148, 163, 184, 0.25) !important;
+/* Pinned column separator — header and body aligned */
+.ag-theme-quartz .ag-pinned-left-cols-container,
+.ag-theme-quartz .ag-pinned-left-header {
+  border-right: 1px solid rgba(169, 180, 185, 0.18) !important;
 }
 
 /* Clickable rows cursor */
