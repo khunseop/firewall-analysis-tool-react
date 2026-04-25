@@ -285,7 +285,7 @@ export function AnalysisPage() {
 
       {/* Config panel */}
       <div className="card rounded-xl overflow-hidden">
-      <div className="px-5 py-3 border-b border-ds-outline-variant/8">
+      <div className="px-5 py-3">
         <span className="text-[13px] font-semibold text-ds-on-surface">분석 설정</span>
       </div>
       <div className="p-5 space-y-5">

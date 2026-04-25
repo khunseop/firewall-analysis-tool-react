@@ -172,7 +172,7 @@ export function SchedulesPage() {
 
       {/* Schedule list */}
       <div className="card rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-ds-outline-variant/8 flex items-center gap-3">
+        <div className="px-5 py-3 flex items-center gap-3">
           <span className="text-[13px] font-semibold text-ds-on-surface">등록된 스케줄</span>
           {schedules.length > 0 && (
             <span className="text-[11px] text-ds-on-surface-variant/50 tabular-nums">{schedules.length}개</span>
