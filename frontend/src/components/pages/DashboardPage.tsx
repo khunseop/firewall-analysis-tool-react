@@ -260,7 +260,7 @@ export function DashboardPage() {
 
       {/* 장비 현황 테이블 */}
       <div className="card rounded-xl flex flex-col overflow-hidden">
-        <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-ds-outline-variant/8">
+        <div className="shrink-0 flex items-center justify-between px-5 py-3">
           <div className="flex items-center gap-3">
             <span className="text-[13px] font-semibold text-ds-on-surface">장비 현황</span>
             {rowData.length > 0 && (
