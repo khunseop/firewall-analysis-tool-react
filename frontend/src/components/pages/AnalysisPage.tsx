@@ -385,7 +385,7 @@ export function AnalysisPage() {
             onExport={() => exportToExcel(results as Record<string, unknown>[], `분석결과_${analysisType}`).catch((e: Error) => toast.error(e.message))}
           />
           <div className="card rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-ds-outline-variant/8">
+            <div className="flex items-center justify-between px-5 py-3">
               <span className="text-[13px] font-semibold text-ds-on-surface">분석 결과 상세</span>
               <span className="text-[11px] text-ds-on-surface-variant/60 tabular-nums">{results.length.toLocaleString()}건</span>
             </div>

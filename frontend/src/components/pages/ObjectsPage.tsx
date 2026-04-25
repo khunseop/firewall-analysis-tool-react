@@ -263,7 +263,7 @@ export function ObjectsPage() {
       {/* Tabs + Grid */}
       <div className="card rounded-xl overflow-hidden">
         {/* Tab bar */}
-        <div className="flex items-center gap-1 border-b border-ds-outline-variant/8 px-4 pt-2">
+        <div className="flex items-center gap-1 px-4 pt-2">
           {TABS.map((tab) => (
             <button
               key={tab.key}
