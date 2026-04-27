@@ -6,6 +6,7 @@ import { Download, Search, ArrowRight } from 'lucide-react'
 import type { ColDef } from '@ag-grid-community/core'
 import { AgGridWrapper, type AgGridWrapperHandle } from '@/components/shared/AgGridWrapper'
 import { ObjectDetailModal } from '@/components/shared/ObjectDetailModal'
+import { DeviceSelector } from '@/components/shared/DeviceSelector'
 import { listDevices } from '@/api/devices'
 import { useDeviceStore } from '@/store/deviceStore'
 import {
@@ -258,6 +259,7 @@ export function ObjectsPage() {
       {/* Page header */}
       <div className="flex items-center justify-between shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Objects</h1>
+        <DeviceSelector />
       </div>
 
       {/* Tabs + Grid */}

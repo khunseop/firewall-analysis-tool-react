@@ -15,6 +15,7 @@ import { ObjectDetailModal } from '@/components/shared/ObjectDetailModal'
 import { PolicyHistoryModal } from '@/components/shared/PolicyHistoryModal'
 import { PolicyDetailModal } from '@/components/shared/PolicyDetailModal'
 import { QueryBuilder, buildRequestFromConditions, QB_FIELDS, OP_LABELS, type Condition } from '@/components/shared/QueryBuilder'
+import { DeviceSelector } from '@/components/shared/DeviceSelector'
 import { useDeviceStore } from '@/store/deviceStore'
 
 const ACTION_BADGE: Record<string, string> = {
@@ -280,6 +281,7 @@ export function PoliciesPage() {
       {/* Page header */}
       <div className="flex items-center justify-between shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-ds-on-surface">Policies</h1>
+        <DeviceSelector />
       </div>
 
       {/* Filter panel */}
