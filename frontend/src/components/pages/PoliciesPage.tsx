@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Download, SlidersHorizontal, AlertTriangle, X, History } from 'lucide-react'
+import { Download, SlidersHorizontal, AlertTriangle, X, History, Search } from 'lucide-react'
 import type { ColDef, RowClickedEvent } from '@ag-grid-community/core'
 import { AgGridWrapper, type AgGridWrapperHandle } from '@/components/shared/AgGridWrapper'
 import { listDevices } from '@/api/devices'
@@ -81,6 +81,8 @@ export function PoliciesPage() {
   const [objectModal, setObjectModal] = useState<{ deviceId: number; name: string } | null>(null)
   const [historyModal, setHistoryModal] = useState<{ deviceId: number; ruleName: string } | null>(null)
   const [detailModal, setDetailModal] = useState<Policy | null>(null)
+  const [quickFilterInput, setQuickFilterInput] = useState('')
+  const [quickFilterText, setQuickFilterText] = useState('')
 
   const { data: devices = [] } = useQuery({ queryKey: ['devices'], queryFn: listDevices })
 
@@ -144,8 +146,12 @@ export function PoliciesPage() {
     setSearched(false)
     setValidObjectNames(new Set())
     setChangeLogMap(new Map())
+    setQuickFilterInput('')
+    setQuickFilterText('')
     gridRef.current?.gridApi?.setFilterModel(null)
   }
+
+  const handleApplyQuickFilter = () => setQuickFilterText(quickFilterInput)
 
   const handleExport = async () => {
     if (policies.length === 0) { toast.warning('내보낼 데이터가 없습니다.'); return }
@@ -355,7 +361,39 @@ export function PoliciesPage() {
       )}
 
       {/* Results grid */}
-      <div className="card rounded-xl overflow-hidden flex-1 min-h-0">
+      <div className="card rounded-xl overflow-hidden flex-1 min-h-0 flex flex-col">
+        {searched && (
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-ds-outline-variant/10 shrink-0">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ds-on-surface-variant pointer-events-none" />
+              <input
+                type="text"
+                value={quickFilterInput}
+                onChange={e => setQuickFilterInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleApplyQuickFilter()}
+                placeholder="결과 내 검색 (Enter)…"
+                className="w-full pl-8 pr-8 py-1.5 text-xs bg-ds-surface-container-low border border-ds-outline-variant/20 rounded-lg focus:outline-none focus:border-ds-tertiary focus:ring-1 focus:ring-ds-tertiary placeholder:text-ds-on-surface-variant/50"
+              />
+              {quickFilterInput && (
+                <button
+                  onClick={() => { setQuickFilterInput(''); setQuickFilterText('') }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-ds-on-surface-variant hover:text-ds-on-surface transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={handleApplyQuickFilter}
+              className="shrink-0 px-3 py-1.5 text-[12px] font-semibold rounded-lg bg-ds-surface-container text-ds-on-surface-variant hover:text-ds-on-surface border border-ds-outline-variant/15 transition-colors"
+            >
+              필터
+            </button>
+            {quickFilterText && (
+              <span className="text-[11px] text-ds-tertiary font-semibold shrink-0">"{quickFilterText}" 필터 중</span>
+            )}
+          </div>
+        )}
         <AgGridWrapper<Policy>
           ref={gridRef}
           columnDefs={columnDefs}
@@ -364,6 +402,7 @@ export function PoliciesPage() {
           height="100%"
           noRowsText="장비를 선택하고 검색 버튼을 클릭하세요."
           defaultColDefOverride={{ filter: false }}
+          quickFilterText={quickFilterText}
           onRowClicked={handleRowClick}
         />
       </div>
