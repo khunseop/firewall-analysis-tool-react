@@ -307,11 +307,18 @@ export function DevicesPage() {
     }
   }, [selectedDevices, confirm, deleteMutation])
 
-  const handleBulkSync = useCallback(() => {
+  const handleBulkSync = useCallback(async () => {
     if (selectedDevices.length === 0) return
+    const names = selectedDevices.map(d => d.name).join(', ')
+    const ok = await confirm({
+      title: '동기화 확인',
+      description: `${selectedDevices.length}개 장비를 동기화하시겠습니까?\n(${names})`,
+      confirmLabel: '동기화',
+    })
+    if (!ok) return
     selectedDevices.forEach(d => syncMutation.mutate(d.id))
     toast.info(`${selectedDevices.length}개 장비 동기화를 시작합니다.`)
-  }, [selectedDevices, syncMutation])
+  }, [selectedDevices, syncMutation, confirm])
 
   const handleBulkTestConnection = useCallback(async () => {
     if (selectedDevices.length === 0) return
@@ -522,6 +529,7 @@ export function DevicesPage() {
 
       {/* 장비 폼 다이얼로그 */}
       <DeviceFormDialog
+        key={editTarget ? `edit-${editTarget.id}` : 'new'}
         open={formOpen}
         onClose={() => { setFormOpen(false); setEditTarget(null) }}
         initial={editTarget ? {
