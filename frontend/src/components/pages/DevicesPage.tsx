@@ -1,10 +1,10 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { formatRelativeTime } from '@/lib/utils'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus, Upload, Download, RefreshCw, Pencil, Trash2, Wifi, Search, XCircle } from 'lucide-react'
+import { Plus, Upload, Download, RefreshCw, Pencil, Trash2, Wifi, Search, XCircle, ChevronDown } from 'lucide-react'
 import type { ColDef } from '@ag-grid-community/core'
-import { AgGridWrapper } from '@/components/shared/AgGridWrapper'
+import { AgGridWrapper, type AgGridWrapperHandle } from '@/components/shared/AgGridWrapper'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -138,11 +138,11 @@ const COLUMN_DEFS: ColDef<Device>[] = [
     checkboxSelection: true,
     headerCheckboxSelection: true,
     width: 44, minWidth: 44, maxWidth: 44,
-    pinned: 'left', sortable: false, filter: false, resizable: false,
+    pinned: 'left', sortable: false, resizable: false,
   },
   {
     headerName: '상태', width: 90, minWidth: 90, maxWidth: 90, pinned: 'left',
-    filter: 'agTextColumnFilter', resizable: false,
+    resizable: false,
     valueGetter: (p) => STATUS_CONFIG[p.data?.last_sync_status ?? '']?.label ?? '',
     cellRenderer: (p: { data: Device }) => {
       const conf = STATUS_CONFIG[p.data?.last_sync_status ?? '']
@@ -155,8 +155,7 @@ const COLUMN_DEFS: ColDef<Device>[] = [
     },
   },
   {
-    headerName: '장비명', width: 200, minWidth: 200,
-    filter: 'agTextColumnFilter',
+    headerName: '장비명', flex: 1, minWidth: 160,
     valueGetter: (p) => `${p.data?.name ?? ''} ${p.data?.ip_address ?? ''}`,
     cellRenderer: (p: { data: Device }) => (
       <div className="flex flex-col leading-tight">
@@ -167,7 +166,7 @@ const COLUMN_DEFS: ColDef<Device>[] = [
   },
   {
     field: 'vendor', headerName: '벤더', width: 100, minWidth: 100, maxWidth: 100,
-    filter: 'agTextColumnFilter', resizable: false,
+    resizable: false,
     valueGetter: (p) => VENDOR_OPTIONS.find(v => v.code === p.data?.vendor)?.label ?? p.data?.vendor ?? '',
     cellRenderer: (p: { data: Device }) => (
       <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${VENDOR_BADGE[p.data?.vendor?.toLowerCase() ?? ''] ?? 'bg-gray-50 text-gray-500 border border-gray-100'}`}>
@@ -176,25 +175,25 @@ const COLUMN_DEFS: ColDef<Device>[] = [
     ),
   },
   {
-    field: 'model', headerName: '모델', width: 120, minWidth: 120,
-    filter: 'agTextColumnFilter',
+    field: 'model', headerName: '모델', width: 120, minWidth: 120, maxWidth: 120,
+    resizable: false,
     cellRenderer: (p: { value: string }) => <span className="text-[12px] text-ds-on-surface-variant">{p.value ?? '—'}</span>,
   },
   {
-    field: 'group', headerName: '그룹', width: 100, minWidth: 100,
-    filter: 'agTextColumnFilter',
+    field: 'group', headerName: '그룹', width: 100, minWidth: 100, maxWidth: 100,
+    resizable: false,
     cellRenderer: (p: { value: string }) => p.value
       ? <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-ds-tertiary/10 text-ds-tertiary">{p.value}</span>
       : <span className="text-[12px] text-ds-on-surface-variant/40">—</span>,
   },
   {
-    field: 'ha_peer_ip', headerName: 'HA Peer IP', width: 130, minWidth: 130,
-    filter: 'agTextColumnFilter',
+    field: 'ha_peer_ip', headerName: 'HA Peer IP', width: 130, minWidth: 130, maxWidth: 130,
+    resizable: false,
     cellRenderer: (p: { value: string }) => <span className="font-mono text-[11px] text-ds-on-surface-variant">{p.value ?? '—'}</span>,
   },
   {
     headerName: '수집 옵션', width: 110, minWidth: 110, maxWidth: 110,
-    sortable: false, filter: false, resizable: false,
+    sortable: false, resizable: false,
     cellRenderer: (p: { data: Device }) => (
       <div className="flex gap-1 flex-wrap items-center">
         {p.data?.collect_last_hit_date && <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">히트수집</span>}
@@ -205,7 +204,7 @@ const COLUMN_DEFS: ColDef<Device>[] = [
   },
   {
     headerName: '마지막 동기화', width: 130, minWidth: 130, maxWidth: 130,
-    filter: 'agTextColumnFilter', resizable: false,
+    resizable: false,
     valueGetter: (p) => formatRelativeTime(p.data?.last_sync_at ?? null),
     cellRenderer: (p: { value: string }) => <span className="text-[12px] text-ds-on-surface-variant">{p.value}</span>,
   },
@@ -213,13 +212,27 @@ const COLUMN_DEFS: ColDef<Device>[] = [
 
 export function DevicesPage() {
   const queryClient = useQueryClient()
+  const gridRef = useRef<AgGridWrapperHandle>(null)
   const [quickFilter, setQuickFilter] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Device | null>(null)
   const [bulkOpen, setBulkOpen] = useState(false)
   const [bulkFile, setBulkFile] = useState<File | null>(null)
   const [selectedDevices, setSelectedDevices] = useState<Device[]>([])
+  const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const addMenuRef = useRef<HTMLDivElement>(null)
   const { confirm, ConfirmDialogElement } = useConfirm()
+
+  useEffect(() => {
+    if (!addMenuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+        setAddMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [addMenuOpen])
 
   const { data: devices = [], isLoading } = useQuery({ queryKey: ['devices'], queryFn: listDevices })
 
@@ -254,14 +267,20 @@ export function DevicesPage() {
   })
 
   const handleSyncMessage = useCallback((msg: SyncStatusMessage) => {
-    queryClient.setQueryData<Device[]>(['devices'], (old) => {
-      if (!old) return old
-      return old.map((d) =>
-        d.id === msg.device_id
-          ? { ...d, last_sync_status: msg.status, last_sync_step: msg.step }
-          : d
-      )
-    })
+    const api = gridRef.current?.gridApi ?? null
+    if (api) {
+      const node = api.getRowNode(String(msg.device_id))
+      if (node?.data) {
+        node.setData({
+          ...node.data,
+          last_sync_status: msg.status,
+          last_sync_step: msg.step,
+          last_sync_at: (msg.status === 'success' || msg.status === 'failure')
+            ? new Date().toISOString()
+            : node.data.last_sync_at,
+        })
+      }
+    }
     if (msg.status === 'success' || msg.status === 'failure') {
       queryClient.invalidateQueries({ queryKey: ['devices'] })
     }
@@ -333,13 +352,44 @@ export function DevicesPage() {
             <RefreshCw className="w-3.5 h-3.5" />
             갱신
           </button>
-          <button
-            onClick={() => { setEditTarget(null); setFormOpen(true) }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold btn-primary-gradient text-ds-on-tertiary rounded-lg shadow-sm hover:opacity-90 transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            장비 추가
-          </button>
+
+          {/* 장비 추가 드롭다운 */}
+          <div className="relative" ref={addMenuRef}>
+            <button
+              onClick={() => setAddMenuOpen((v) => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold btn-primary-gradient text-ds-on-tertiary rounded-lg shadow-sm hover:opacity-90 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              장비 추가
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${addMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {addMenuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-xl shadow-lg border border-ds-outline-variant/15 py-1 z-50">
+                <button
+                  onClick={() => { setAddMenuOpen(false); setEditTarget(null); setFormOpen(true) }}
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] font-medium text-ds-on-surface hover:bg-ds-surface-container-low transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5 text-ds-on-surface-variant" />
+                  장비 추가
+                </button>
+                <button
+                  onClick={() => { setAddMenuOpen(false); setBulkOpen(true) }}
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] font-medium text-ds-on-surface hover:bg-ds-surface-container-low transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5 text-ds-on-surface-variant" />
+                  일괄 등록
+                </button>
+                <button
+                  onClick={() => { setAddMenuOpen(false); downloadDeviceTemplate() }}
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] font-medium text-ds-on-surface hover:bg-ds-surface-container-low transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5 text-ds-on-surface-variant" />
+                  템플릿 다운로드
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -391,60 +441,15 @@ export function DevicesPage() {
       {/* 장비 테이블 */}
       <div className="card rounded-xl flex flex-col overflow-hidden">
         <div className="shrink-0 flex items-center justify-between px-5 py-3 gap-3">
-          {/* 좌측: 제목 + 선택 현황 + 일괄 작업 버튼 */}
+          {/* 좌측: 제목 + 장비 수 */}
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-[13px] font-semibold text-ds-on-surface shrink-0">등록된 장비</span>
             {devices.length > 0 && (
               <span className="text-[11px] text-ds-on-surface-variant/50 tabular-nums shrink-0">{devices.length}대</span>
             )}
-
-            {sel > 0 && (
-              <>
-                <span className="w-px h-4 bg-ds-outline-variant/30 shrink-0" />
-                <span className="text-[11px] font-semibold text-ds-tertiary tabular-nums shrink-0">{sel}개 선택</span>
-
-                {/* 편집 — 단일 선택만 */}
-                <button
-                  onClick={handleEdit}
-                  disabled={!isSingle}
-                  title={isSingle ? '수정' : '단일 장비만 수정 가능'}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-outline-variant/20 bg-ds-surface-container-low text-ds-on-surface-variant hover:text-ds-primary hover:bg-ds-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  <Pencil className="w-3 h-3" />
-                  수정
-                </button>
-
-                {/* 동기화 */}
-                <button
-                  onClick={handleBulkSync}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-outline-variant/20 bg-ds-surface-container-low text-ds-on-surface-variant hover:text-ds-primary hover:bg-ds-surface-container-high transition-colors"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  동기화
-                </button>
-
-                {/* 연결 테스트 */}
-                <button
-                  onClick={handleBulkTestConnection}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-outline-variant/20 bg-ds-surface-container-low text-ds-on-surface-variant hover:text-ds-primary hover:bg-ds-surface-container-high transition-colors"
-                >
-                  <Wifi className="w-3 h-3" />
-                  연결 테스트
-                </button>
-
-                {/* 삭제 */}
-                <button
-                  onClick={handleBulkDelete}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-error/20 bg-ds-error/5 text-ds-error hover:bg-ds-error/10 transition-colors"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  삭제
-                </button>
-              </>
-            )}
           </div>
 
-          {/* 우측: 검색 + 유틸 */}
+          {/* 우측: 검색 + 작업 버튼 + 실시간 */}
           <div className="flex items-center gap-2 shrink-0">
             <div className="flex items-center gap-1.5 bg-ds-surface-container-low rounded-lg px-2.5 py-1.5 border border-ds-outline-variant/10">
               <Search className="w-3 h-3 text-ds-on-surface-variant shrink-0" />
@@ -460,20 +465,44 @@ export function DevicesPage() {
                 </button>
               )}
             </div>
-            <button
-              onClick={() => setBulkOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-ds-on-surface-variant bg-ds-surface-container-low rounded-lg border border-ds-outline-variant/10 hover:text-ds-on-surface transition-colors"
-            >
-              <Upload className="w-3 h-3" />
-              일괄 등록
-            </button>
-            <button
-              onClick={downloadDeviceTemplate}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-ds-on-surface-variant bg-ds-surface-container-low rounded-lg border border-ds-outline-variant/10 hover:text-ds-on-surface transition-colors"
-            >
-              <Download className="w-3 h-3" />
-              템플릿
-            </button>
+
+            {/* 선택 시 작업 버튼 */}
+            {sel > 0 && (
+              <>
+                <span className="text-[11px] font-semibold text-ds-tertiary tabular-nums shrink-0">{sel}개 선택</span>
+                <button
+                  onClick={handleEdit}
+                  disabled={!isSingle}
+                  title={isSingle ? '수정' : '단일 장비만 수정 가능'}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-outline-variant/20 bg-ds-surface-container-low text-ds-on-surface-variant hover:text-ds-primary hover:bg-ds-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Pencil className="w-3 h-3" />
+                  수정
+                </button>
+                <button
+                  onClick={handleBulkSync}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-outline-variant/20 bg-ds-surface-container-low text-ds-on-surface-variant hover:text-ds-primary hover:bg-ds-surface-container-high transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  동기화
+                </button>
+                <button
+                  onClick={handleBulkTestConnection}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-outline-variant/20 bg-ds-surface-container-low text-ds-on-surface-variant hover:text-ds-primary hover:bg-ds-surface-container-high transition-colors"
+                >
+                  <Wifi className="w-3 h-3" />
+                  연결 테스트
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium rounded-lg border border-ds-error/20 bg-ds-error/5 text-ds-error hover:bg-ds-error/10 transition-colors"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  삭제
+                </button>
+              </>
+            )}
+
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               실시간
@@ -482,6 +511,7 @@ export function DevicesPage() {
         </div>
 
         <AgGridWrapper<Device>
+          ref={gridRef}
           columnDefs={COLUMN_DEFS}
           rowData={devices}
           getRowId={(p) => String(p.data.id)}
@@ -490,11 +520,12 @@ export function DevicesPage() {
           noRowsText="등록된 장비가 없습니다."
           rowSelection="multiple"
           onSelectionChanged={(rows) => setSelectedDevices(rows)}
+          defaultColDefOverride={{ filter: false, resizable: false, sortable: true }}
+          fitColumns
           getRowStyle={(p) => {
             const s = p.data?.last_sync_status
-            return (s === 'failure' || s === 'error')
-              ? { borderLeft: '2px solid #9f403d', backgroundColor: 'rgba(254, 226, 226, 0.12)' }
-              : { borderLeft: '2px solid transparent' }
+            if (s === 'failure' || s === 'error') return { borderLeft: '2px solid #9f403d', backgroundColor: 'rgba(254, 226, 226, 0.12)' }
+            return undefined
           }}
         />
       </div>
