@@ -139,11 +139,10 @@ const COLUMN_DEFS: ColDef<Device>[] = [
     headerCheckboxSelection: true,
     headerCheckboxSelectionFilteredOnly: true,
     width: 44, minWidth: 44, maxWidth: 44,
-    pinned: 'left', sortable: false, resizable: false,
+    sortable: false, resizable: false,
   },
   {
-    headerName: '상태', width: 90, minWidth: 90, maxWidth: 90, pinned: 'left',
-    resizable: false,
+    headerName: '상태', minWidth: 80,
     valueGetter: (p) => STATUS_CONFIG[p.data?.last_sync_status ?? '']?.label ?? '',
     cellRenderer: (p: { data: Device }) => {
       const conf = STATUS_CONFIG[p.data?.last_sync_status ?? '']
@@ -156,7 +155,7 @@ const COLUMN_DEFS: ColDef<Device>[] = [
     },
   },
   {
-    headerName: '장비명', flex: 1, minWidth: 160,
+    headerName: '장비명', flex: 2, minWidth: 160,
     valueGetter: (p) => `${p.data?.name ?? ''} ${p.data?.ip_address ?? ''}`,
     cellRenderer: (p: { data: Device }) => (
       <div className="flex flex-col leading-tight">
@@ -166,8 +165,7 @@ const COLUMN_DEFS: ColDef<Device>[] = [
     ),
   },
   {
-    field: 'vendor', headerName: '벤더', width: 100, minWidth: 100, maxWidth: 100,
-    resizable: false,
+    field: 'vendor', headerName: '벤더', minWidth: 90,
     valueGetter: (p) => VENDOR_OPTIONS.find(v => v.code === p.data?.vendor)?.label ?? p.data?.vendor ?? '',
     cellRenderer: (p: { data: Device }) => (
       <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${VENDOR_BADGE[p.data?.vendor?.toLowerCase() ?? ''] ?? 'bg-gray-50 text-gray-500 border border-gray-100'}`}>
@@ -176,25 +174,21 @@ const COLUMN_DEFS: ColDef<Device>[] = [
     ),
   },
   {
-    field: 'model', headerName: '모델', width: 120, minWidth: 120, maxWidth: 120,
-    resizable: false,
+    field: 'model', headerName: '모델', minWidth: 100,
     cellRenderer: (p: { value: string }) => <span className="text-[12px] text-ds-on-surface-variant">{p.value ?? '—'}</span>,
   },
   {
-    field: 'group', headerName: '그룹', width: 100, minWidth: 100, maxWidth: 100,
-    resizable: false,
+    field: 'group', headerName: '그룹', minWidth: 90,
     cellRenderer: (p: { value: string }) => p.value
       ? <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-ds-tertiary/10 text-ds-tertiary">{p.value}</span>
       : <span className="text-[12px] text-ds-on-surface-variant/40">—</span>,
   },
   {
-    field: 'ha_peer_ip', headerName: 'HA Peer IP', width: 130, minWidth: 130, maxWidth: 130,
-    resizable: false,
+    field: 'ha_peer_ip', headerName: 'HA Peer IP', minWidth: 120,
     cellRenderer: (p: { value: string }) => <span className="font-mono text-[11px] text-ds-on-surface-variant">{p.value ?? '—'}</span>,
   },
   {
-    headerName: '수집 옵션', width: 110, minWidth: 110, maxWidth: 110,
-    sortable: false, resizable: false,
+    headerName: '수집 옵션', minWidth: 100, sortable: false,
     cellRenderer: (p: { data: Device }) => (
       <div className="flex gap-1 flex-wrap items-center">
         {p.data?.collect_last_hit_date && <span className="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">히트수집</span>}
@@ -204,8 +198,7 @@ const COLUMN_DEFS: ColDef<Device>[] = [
     ),
   },
   {
-    headerName: '마지막 동기화', width: 130, minWidth: 130, maxWidth: 130,
-    resizable: false,
+    headerName: '마지막 동기화', minWidth: 120,
     valueGetter: (p) => formatRelativeTime(p.data?.last_sync_at ?? null),
     cellRenderer: (p: { value: string }) => <span className="text-[12px] text-ds-on-surface-variant">{p.value}</span>,
   },
@@ -517,7 +510,7 @@ export function DevicesPage() {
           noRowsText="등록된 장비가 없습니다."
           rowSelection="multiple"
           onSelectionChanged={(rows) => setSelectedDevices(rows)}
-          defaultColDefOverride={{ filter: false, resizable: false, sortable: true }}
+          defaultColDefOverride={{ filter: false, resizable: true, sortable: true }}
           fitColumns
           getRowStyle={(p) => {
             const s = p.data?.last_sync_status

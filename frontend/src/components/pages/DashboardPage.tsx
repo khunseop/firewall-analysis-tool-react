@@ -53,19 +53,6 @@ function transformDeviceStats(d: DeviceStats): DeviceRow {
 
 const COLUMN_DEFS: ColDef<DeviceRow>[] = [
   {
-    field: 'sync_status', headerName: '상태',
-    cellRenderer: (p: { value: string | null; data: DeviceRow }) => {
-      const conf = STATUS_CONFIG[p.value ?? '']
-      if (!conf) return <span className="text-ds-on-surface-variant/40 text-xs">—</span>
-      return (
-        <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${conf.text}`} title={p.data.sync_step ?? ''}>
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${conf.dot}`} />
-          {conf.label}
-        </span>
-      )
-    },
-  },
-  {
     field: 'name', headerName: '장비명', flex: 1, minWidth: 140,
     cellRenderer: (p: { data: DeviceRow }) => (
       <div className="flex flex-col justify-center leading-tight">
@@ -281,10 +268,6 @@ export function DashboardPage() {
                   <XCircle className="w-3 h-3 text-ds-on-surface-variant hover:text-ds-on-surface" />
                 </button>
               )}
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              실시간
             </div>
           </div>
         </div>
