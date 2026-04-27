@@ -1,8 +1,8 @@
-import { useState, useRef, useMemo, useEffect } from 'react'
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Download, SlidersHorizontal, AlertTriangle, X, History } from 'lucide-react'
+import { Download, SlidersHorizontal, AlertTriangle, X, History, Search } from 'lucide-react'
 import type { ColDef, RowClickedEvent } from '@ag-grid-community/core'
 import { AgGridWrapper, type AgGridWrapperHandle } from '@/components/shared/AgGridWrapper'
 import { listDevices } from '@/api/devices'
@@ -267,6 +267,20 @@ export function PoliciesPage() {
     { field: 'vsys', headerName: 'VSYS', width: 72, hide: true },
   ]
 
+  // 빠른 검색 ↔ conditions 연동 (rule_name contains 조건이 단일 진실 원천)
+  const quickSearchValue = conditions.find(c => c.field === 'rule_name' && c.operator === 'contains')?.value ?? ''
+
+  const handleQuickSearchChange = useCallback((text: string) => {
+    setConditions(prev => {
+      const idx = prev.findIndex(c => c.field === 'rule_name' && c.operator === 'contains')
+      if (!text.trim()) {
+        return idx >= 0 ? prev.filter((_, i) => i !== idx) : prev
+      }
+      if (idx >= 0) return prev.map((c, i) => i === idx ? { ...c, value: text } : c)
+      return [{ field: 'rule_name', operator: 'contains' as const, value: text }, ...prev]
+    })
+  }, [])
+
   const hasConditions = conditions.length > 0 && conditions.some(c => c.value.trim())
 
   return (
@@ -297,10 +311,31 @@ export function PoliciesPage() {
             )}
           </button>
 
-          {/* 활성 조건 태그 (패널 닫혔을 때) */}
+          {/* 빠른 검색 입력창 */}
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ds-on-surface-variant pointer-events-none" />
+            <input
+              type="text"
+              value={quickSearchValue}
+              onChange={e => handleQuickSearchChange(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              placeholder="정책명 검색…"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-ds-surface-container-low border border-ds-outline-variant/20 rounded-lg focus:outline-none focus:border-ds-tertiary focus:ring-1 focus:ring-ds-tertiary placeholder:text-ds-on-surface-variant/50 font-mono"
+            />
+            {quickSearchValue && (
+              <button
+                onClick={() => handleQuickSearchChange('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-ds-on-surface-variant hover:text-ds-on-surface transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* 활성 조건 태그 (rule_name 제외, 패널 닫혔을 때) */}
           {!filtersOpen && hasConditions && (
-            <div className="flex flex-wrap gap-1.5 flex-1">
-              {conditions.filter(c => c.value.trim()).map((c, i) => {
+            <div className="flex flex-wrap gap-1.5">
+              {conditions.filter(c => c.value.trim() && !(c.field === 'rule_name' && c.operator === 'contains')).map((c, i) => {
                 const fieldLabel = QB_FIELDS.find(f => f.key === c.field)?.label ?? c.field
                 const opLabel = OP_LABELS[c.operator as keyof typeof OP_LABELS] ?? c.operator
                 const isNot = c.operator === 'not_equals' || c.operator === 'not_contains'
