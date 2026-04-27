@@ -137,6 +137,7 @@ const COLUMN_DEFS: ColDef<Device>[] = [
   {
     checkboxSelection: true,
     headerCheckboxSelection: true,
+    headerCheckboxSelectionFilteredOnly: true,
     width: 44, minWidth: 44, maxWidth: 44,
     pinned: 'left', sortable: false, resizable: false,
   },
@@ -449,23 +450,8 @@ export function DevicesPage() {
             )}
           </div>
 
-          {/* 우측: 검색 + 작업 버튼 + 실시간 */}
+          {/* 우측: 작업 버튼(선택 시) + 검색 */}
           <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 bg-ds-surface-container-low rounded-lg px-2.5 py-1.5 border border-ds-outline-variant/10">
-              <Search className="w-3 h-3 text-ds-on-surface-variant shrink-0" />
-              <input
-                value={quickFilter}
-                onChange={(e) => setQuickFilter(e.target.value)}
-                placeholder="장비명, IP 검색"
-                className="text-[12px] bg-transparent outline-none text-ds-on-surface placeholder:text-ds-on-surface-variant/40 w-36"
-              />
-              {quickFilter && (
-                <button onClick={() => setQuickFilter('')}>
-                  <XCircle className="w-3 h-3 text-ds-on-surface-variant hover:text-ds-on-surface" />
-                </button>
-              )}
-            </div>
-
             {/* 선택 시 작업 버튼 */}
             {sel > 0 && (
               <>
@@ -500,12 +486,23 @@ export function DevicesPage() {
                   <Trash2 className="w-3 h-3" />
                   삭제
                 </button>
+                <span className="w-px h-4 bg-ds-outline-variant/30 shrink-0" />
               </>
             )}
 
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              실시간
+            <div className="flex items-center gap-1.5 bg-ds-surface-container-low rounded-lg px-2.5 py-1.5 border border-ds-outline-variant/10">
+              <Search className="w-3 h-3 text-ds-on-surface-variant shrink-0" />
+              <input
+                value={quickFilter}
+                onChange={(e) => setQuickFilter(e.target.value)}
+                placeholder="장비명, IP 검색"
+                className="text-[12px] bg-transparent outline-none text-ds-on-surface placeholder:text-ds-on-surface-variant/40 w-36"
+              />
+              {quickFilter && (
+                <button onClick={() => setQuickFilter('')}>
+                  <XCircle className="w-3 h-3 text-ds-on-surface-variant hover:text-ds-on-surface" />
+                </button>
+              )}
             </div>
           </div>
         </div>
