@@ -19,8 +19,8 @@ interface FieldDef {
 export const QB_FIELDS: FieldDef[] = [
   { key: 'rule_name',     label: '정책명',          type: 'text',   operators: ['contains', 'not_contains', 'equals', 'not_equals'], placeholder: 'web-policy' },
   { key: 'vsys',          label: '가상시스템',       type: 'text',   operators: ['contains', 'equals'], placeholder: 'vsys1' },
-  { key: 'src_ip',        label: '출발지 IP',        type: 'text',   operators: ['equals', 'not_equals'], placeholder: '10.0.0.0/8' },
-  { key: 'dst_ip',        label: '목적지 IP',        type: 'text',   operators: ['equals', 'not_equals'], placeholder: '0.0.0.0/0' },
+  { key: 'src_ip',        label: '출발지 IP',        type: 'text',   operators: ['equals', 'not_equals', 'contains', 'not_contains'], placeholder: '10.0.0.0/8' },
+  { key: 'dst_ip',        label: '목적지 IP',        type: 'text',   operators: ['equals', 'not_equals', 'contains', 'not_contains'], placeholder: '0.0.0.0/0' },
   { key: 'src_name',      label: '출발지 객체명',    type: 'text',   operators: ['contains', 'not_contains', 'equals', 'not_equals'], placeholder: 'host-10.0.0.1' },
   { key: 'dst_name',      label: '목적지 객체명',    type: 'text',   operators: ['contains', 'not_contains', 'equals', 'not_equals'], placeholder: 'server-group' },
   { key: 'service',       label: '서비스/포트',      type: 'text',   operators: ['equals', 'not_equals'], placeholder: 'tcp/443 또는 http' },
@@ -72,9 +72,9 @@ export function buildRequestFromConditions(
     action: null, action_negate: false,
     enable: null,
     last_hit_date_from: null, last_hit_date_to: null,
-    src_ips: [], dst_ips: [], services: [],
+    src_ips: [], dst_ips: [], src_ips_exact: [], dst_ips_exact: [], services: [],
     src_names: [], dst_names: [], service_names: [],
-    src_ips_exclude: [], dst_ips_exclude: [], services_exclude: [],
+    src_ips_exclude: [], dst_ips_exclude: [], src_ips_exact_exclude: [], dst_ips_exact_exclude: [], services_exclude: [],
     src_names_exclude: [], dst_names_exclude: [], service_names_exclude: [],
   }
 
@@ -82,6 +82,7 @@ export function buildRequestFromConditions(
     const v = value?.trim()
     if (!v) continue
     const isNot = operator === 'not_equals' || operator === 'not_contains'
+    const isExact = operator === 'equals' || operator === 'not_equals'
     switch (field) {
       case 'rule_name':
         payload.rule_name = v
@@ -111,12 +112,12 @@ export function buildRequestFromConditions(
         payload.enable = v === 'true'
         break
       case 'src_ip':
-        if (isNot) (payload.src_ips_exclude as string[]).push(v)
-        else (payload.src_ips as string[]).push(v)
+        if (isExact) (isNot ? (payload.src_ips_exact_exclude as string[]) : (payload.src_ips_exact as string[])).push(v)
+        else         (isNot ? (payload.src_ips_exclude as string[])        : (payload.src_ips as string[])).push(v)
         break
       case 'dst_ip':
-        if (isNot) (payload.dst_ips_exclude as string[]).push(v)
-        else (payload.dst_ips as string[]).push(v)
+        if (isExact) (isNot ? (payload.dst_ips_exact_exclude as string[]) : (payload.dst_ips_exact as string[])).push(v)
+        else         (isNot ? (payload.dst_ips_exclude as string[])        : (payload.dst_ips as string[])).push(v)
         break
       case 'src_name':
         if (isNot) (payload.src_names_exclude as string[]).push(v)

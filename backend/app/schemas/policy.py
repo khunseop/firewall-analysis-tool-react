@@ -74,6 +74,9 @@ class PolicySearchRequest(BaseModel):
     src_names: Optional[List[str]] = None
     dst_names: Optional[List[str]] = None
     service_names: Optional[List[str]] = None
+    # Exact-match IP variants (ip_start == start AND ip_end == end)
+    src_ips_exact: Optional[List[str]] = None
+    dst_ips_exact: Optional[List[str]] = None
     # Exclude (NOT IN) variants for member-index filters
     src_ips_exclude: Optional[List[str]] = None
     dst_ips_exclude: Optional[List[str]] = None
@@ -81,6 +84,8 @@ class PolicySearchRequest(BaseModel):
     src_names_exclude: Optional[List[str]] = None
     dst_names_exclude: Optional[List[str]] = None
     service_names_exclude: Optional[List[str]] = None
+    src_ips_exact_exclude: Optional[List[str]] = None
+    dst_ips_exact_exclude: Optional[List[str]] = None
 
     # Paging (optional; AG-Grid usually client-side). If provided, backend slices.
     skip: Optional[int] = None

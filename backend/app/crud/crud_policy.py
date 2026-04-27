@@ -138,25 +138,39 @@ async def search_policies(db: AsyncSession, req: schemas.PolicySearchRequest) ->
 
     list_of_policy_id_sets = []
 
-    # 출발지 IP 필터 (Source IP Index 활용)
+    # 출발지 IP 필터 — overlap (포함) 검색
     if req.src_ips:
         src_policy_ids = set()
         for ip_str in req.src_ips:
-            # IP를 숫자 범위(start, end)로 변환하여 검색 (단일 IP 또는 대역폭 모두 지원)
             _, start, end = parse_ipv4_numeric(ip_str)
             if start is not None and end is not None:
-                # 정책 대역과 검색 대역이 겹치는지(Overlapping) 확인하는 쿼리
                 query = select(models.PolicyAddressMember.policy_id).where(
                     models.PolicyAddressMember.device_id.in_(req.device_ids),
                     models.PolicyAddressMember.direction == 'source',
-                    models.PolicyAddressMember.ip_start <= end, # 정책 시작점이 검색 종료점보다 작거나 같고
-                    models.PolicyAddressMember.ip_end >= start   # 정책 종료점이 검색 시작점보다 크거나 같음
+                    models.PolicyAddressMember.ip_start <= end,
+                    models.PolicyAddressMember.ip_end >= start
                 )
                 result = await db.execute(query)
                 src_policy_ids.update(result.scalars().all())
         list_of_policy_id_sets.append(src_policy_ids)
 
-    # 목적지 IP 필터 (Destination IP Index 활용)
+    # 출발지 IP 필터 — exact (일치) 검색
+    if req.src_ips_exact:
+        src_exact_ids = set()
+        for ip_str in req.src_ips_exact:
+            _, start, end = parse_ipv4_numeric(ip_str)
+            if start is not None and end is not None:
+                query = select(models.PolicyAddressMember.policy_id).where(
+                    models.PolicyAddressMember.device_id.in_(req.device_ids),
+                    models.PolicyAddressMember.direction == 'source',
+                    models.PolicyAddressMember.ip_start == start,
+                    models.PolicyAddressMember.ip_end == end
+                )
+                result = await db.execute(query)
+                src_exact_ids.update(result.scalars().all())
+        list_of_policy_id_sets.append(src_exact_ids)
+
+    # 목적지 IP 필터 — overlap (포함) 검색
     if req.dst_ips:
         dst_policy_ids = set()
         for ip_str in req.dst_ips:
@@ -171,6 +185,22 @@ async def search_policies(db: AsyncSession, req: schemas.PolicySearchRequest) ->
                 result = await db.execute(query)
                 dst_policy_ids.update(result.scalars().all())
         list_of_policy_id_sets.append(dst_policy_ids)
+
+    # 목적지 IP 필터 — exact (일치) 검색
+    if req.dst_ips_exact:
+        dst_exact_ids = set()
+        for ip_str in req.dst_ips_exact:
+            _, start, end = parse_ipv4_numeric(ip_str)
+            if start is not None and end is not None:
+                query = select(models.PolicyAddressMember.policy_id).where(
+                    models.PolicyAddressMember.device_id.in_(req.device_ids),
+                    models.PolicyAddressMember.direction == 'destination',
+                    models.PolicyAddressMember.ip_start == start,
+                    models.PolicyAddressMember.ip_end == end
+                )
+                result = await db.execute(query)
+                dst_exact_ids.update(result.scalars().all())
+        list_of_policy_id_sets.append(dst_exact_ids)
 
     # 서비스 필터 (Service/Port Index 활용 + 이름 폴백)
     if req.services:
@@ -229,31 +259,44 @@ async def search_policies(db: AsyncSession, req: schemas.PolicySearchRequest) ->
         if or_conditions or name_fallback_tokens:
             list_of_policy_id_sets.append(svc_policy_ids)
 
-    # 출발지 객체명 필터 (PolicyAddressMember.token ILIKE)
+    # 출발지 객체명 필터 (PolicyAddressMember.token ILIKE + "any" 특수 처리)
     if req.src_names:
         from sqlalchemy import or_ as _or_src
         valid_src_names = [n.strip() for n in req.src_names if n.strip()]
         if valid_src_names:
             src_name_ids = set()
+            name_conds = [models.PolicyAddressMember.token.ilike(f'%{n}%') for n in valid_src_names]
+            # "any" 는 token 없이 ip_start=0/ip_end=4294967295 로 저장됨
+            if any(n.lower() == 'any' for n in valid_src_names):
+                name_conds.append(and_(
+                    models.PolicyAddressMember.ip_start == 0,
+                    models.PolicyAddressMember.ip_end == (2**32 - 1)
+                ))
             query = select(models.PolicyAddressMember.policy_id).where(
                 models.PolicyAddressMember.device_id.in_(req.device_ids),
                 models.PolicyAddressMember.direction == 'source',
-                _or_src(*[models.PolicyAddressMember.token.ilike(f'%{n}%') for n in valid_src_names])
+                _or_src(*name_conds)
             )
             result = await db.execute(query)
             src_name_ids.update(result.scalars().all())
             list_of_policy_id_sets.append(src_name_ids)
 
-    # 목적지 객체명 필터 (PolicyAddressMember.token ILIKE)
+    # 목적지 객체명 필터 (PolicyAddressMember.token ILIKE + "any" 특수 처리)
     if req.dst_names:
         from sqlalchemy import or_ as _or_dst
         valid_dst_names = [n.strip() for n in req.dst_names if n.strip()]
         if valid_dst_names:
             dst_name_ids = set()
+            name_conds = [models.PolicyAddressMember.token.ilike(f'%{n}%') for n in valid_dst_names]
+            if any(n.lower() == 'any' for n in valid_dst_names):
+                name_conds.append(and_(
+                    models.PolicyAddressMember.ip_start == 0,
+                    models.PolicyAddressMember.ip_end == (2**32 - 1)
+                ))
             query = select(models.PolicyAddressMember.policy_id).where(
                 models.PolicyAddressMember.device_id.in_(req.device_ids),
                 models.PolicyAddressMember.direction == 'destination',
-                _or_dst(*[models.PolicyAddressMember.token.ilike(f'%{n}%') for n in valid_dst_names])
+                _or_dst(*name_conds)
             )
             result = await db.execute(query)
             dst_name_ids.update(result.scalars().all())
@@ -346,10 +389,42 @@ async def search_policies(db: AsyncSession, req: schemas.PolicySearchRequest) ->
         if excluded:
             stmt = stmt.where(Policy.id.notin_(excluded))
 
+    if req.src_ips_exact_exclude:
+        ids: set = set()
+        for ip_str in req.src_ips_exact_exclude:
+            _, start, end = parse_ipv4_numeric(ip_str)
+            if start is not None and end is not None:
+                q = select(models.PolicyAddressMember.policy_id).where(
+                    models.PolicyAddressMember.device_id.in_(req.device_ids),
+                    models.PolicyAddressMember.direction == 'source',
+                    models.PolicyAddressMember.ip_start == start,
+                    models.PolicyAddressMember.ip_end == end
+                )
+                r = await db.execute(q)
+                ids.update(r.scalars().all())
+        if ids:
+            stmt = stmt.where(Policy.id.notin_(ids))
+
     if req.dst_ips_exclude:
         excluded = await _collect_addr_ids('destination', req.dst_ips_exclude)
         if excluded:
             stmt = stmt.where(Policy.id.notin_(excluded))
+
+    if req.dst_ips_exact_exclude:
+        ids: set = set()
+        for ip_str in req.dst_ips_exact_exclude:
+            _, start, end = parse_ipv4_numeric(ip_str)
+            if start is not None and end is not None:
+                q = select(models.PolicyAddressMember.policy_id).where(
+                    models.PolicyAddressMember.device_id.in_(req.device_ids),
+                    models.PolicyAddressMember.direction == 'destination',
+                    models.PolicyAddressMember.ip_start == start,
+                    models.PolicyAddressMember.ip_end == end
+                )
+                r = await db.execute(q)
+                ids.update(r.scalars().all())
+        if ids:
+            stmt = stmt.where(Policy.id.notin_(ids))
 
     if req.services_exclude:
         excluded = await _collect_svc_ids(req.services_exclude)
